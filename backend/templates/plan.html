@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crane Planner - QC Schedule</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='maintenance.css') }}">
+    <style>
+        /* Toast 스타일 */
+        #toast {
+            visibility: hidden;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            min-width: 250px;
+            padding: 15px 25px;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            border-radius: 4px;
+            z-index: 9999;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #toast.success {
+            background-color: #28a745;
+        }
+
+        #toast.error {
+            background-color: #dc3545;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .login-btn, .armgc-btn {
+            background: #2ecc71;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .username {
+            margin-right: 10px;
+        }
+
+        .schedule-info {
+            color: #666;
+            margin-bottom: 24px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .ship-list {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .ship {
+            background-color: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: move;
+            font-size: 0.85em;
+            width: fit-content;
+            position: relative;
+            user-select: none;
+        }
+
+        .ship[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ship-1 { background-color: #4CAF50; }
+        .ship-2 { background-color: #2196F3; }
+        .ship-3 { background-color: #f44336; }
+        .ship-4 { background-color: #9C27B0; }
+        .ship-5 { background-color: #FF9800; }
+
+        .schedule-grid {
+            display: flex;
+            overflow-x: auto;
+            margin: 20px 0;
+        }
+
+        .time-column {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 1;
+            border-right: 2px solid #eee;
+            min-width: 120px;
+        }
+
+        .time-header {
+            padding: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+        }
+
+        .time-slot {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .crane-grid {
+            display: flex;
+        }
+
+        .crane-column {
+            min-width: 120px;
+            border-right: 1px solid #eee;
+        }
+
+        .crane-header {
+            padding: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+        }
+
+        .grid-slot {
+            height: 100px;
+            border: 1px solid #eee;
+            transition: all 0.2s;
+            position: relative;
+            background-color: white;
+            border: 1px solid #ddd;
+            padding: 5px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grid-slot.drag-over {
+            background-color: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+
+        .grid-slot[disabled] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .grid-slot .delete-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .grid-slot:hover .delete-btn {
+            opacity: 1;
+        }
+
+        .maintenance-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .maintenance-table th {
+            background: #f1f8ff;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e3f2fd;
+        }
+
+        .maintenance-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .maintenance-table tr:hover {
+            background-color: #f5f9ff;
+        }
+
+        .maintenance-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .maintenance-input:focus {
+            border-color: #4CAF50;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.1);
+        }
+
+        #save-maintenance {
+            background: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        #save-maintenance:hover {
+            background: #45a049;
+        }
+
+        .ship-schedule-section {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .maintenance-plan-section {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .ship-schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .maintenance-plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .ship-schedule-grid {
+            display: flex;
+            gap: 20px;
+        }
+
+        .maintenance-plan-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .maintenance-plan-table th {
+            background: #f1f8ff;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: #2c3e50;
+            border-bottom: 2px solid #e3f2fd;
+        }
+
+        .maintenance-plan-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .maintenance-plan-table tr:hover {
+            background-color: #f5f9ff;
+        }
+
+        .maintenance-wrapper {
+            background-color: #f5f5f5;
+            padding: 20px 0;
+            margin-top: 20px;
+        }
+
+        .maintenance-plan-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .maintenance-plan-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .maintenance-plan-header h2 {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        .maintenance-plan-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: white;
+        }
+
+        .maintenance-plan-table th {
+            background: #f8f9fa;
+            color: #2c3e50;
+            font-weight: 600;
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .maintenance-plan-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: middle;
+        }
+
+        .maintenance-plan-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .maintenance-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .maintenance-input:focus {
+            border-color: #4a90e2;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.1);
+        }
+
+        .maintenance-input:disabled {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .table-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-start;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #4a90e2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #357abd;
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .time-input-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .time-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Toast 메시지 컨테이너 -->
+    <div id="toast" class="toast"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Crane Planner - QC Schedule</h1>
+            <div class="header-actions">
+                {% if is_logged_in %}
+                    <span class="username">{{ session['username'] }} ({{ session['role'] }})</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+                {% endif %}
+                <button onclick="window.location.href='/armgc_maintenance/' + document.querySelector('.date-info').textContent.split(': ')[1]" class="armgc-btn">ARMGC</button>
+            </div>
+        </div>
+
+        <div class="schedule-info">Selected Date: {{ date }} | Crane Type: {{ crane_type }}</div>
+
+        <div class="ship-schedule-section">
+            <div class="ship-schedule-header">
+                <div class="title-group">
+                    <h2>Ship Schedule</h2>
+                    <span class="date-info">Date: {{ date }}</span>
+                </div>
+                <div class="qc-usage">
+                    <label for="qc-usage-progress">QC 사용률: </label>
+                    <progress id="qc-usage-progress" value="0" max="100"></progress>
+                    <span id="qc-usage-rate">0%</span>
+                </div>
+                <div class="header-controls">
+                    <div class="ship-list">
+                        {% for i in range(1, 6) %}
+                        <div class="ship ship-{{ i }}" draggable="true" data-ship="{{ i }}" {% if not can_edit %}disabled{% endif %}>
+                            Ship {{ i }}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if can_edit %}
+                        <button id="clear-all-button" class="btn btn-warning">Clear All</button>
+                        <button id="save-ship-plan-button" class="btn btn-success">Save Ship Plan</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="ship-schedule-grid">
+                <div class="time-column">
+                    <div class="time-header">Time</div>
+                    <div class="time-slot">08:00 - 12:00</div>
+                    <div class="time-slot">13:00 - 18:00</div>
+                </div>
+                
+                <div class="crane-grid">
+                    {% for crane_number in range(12, 0, -1) %}
+                    <div class="crane-column">
+                        <div class="crane-header">Crane {{ crane_number + 100 }}</div>
+                        <div class="grid-slot" data-crane="{{ crane_number }}" data-time="morning" 
+                             {% if not can_edit %}disabled{% endif %}>
+                        </div>
+                        <div class="grid-slot" data-crane="{{ crane_number }}" data-time="afternoon"
+                             {% if not can_edit %}disabled{% endif %}>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="maintenance-wrapper">
+            <div class="container" id="maintenance-container">
+                <div class="section-header">
+                    <h2>Crane Maintenance Plan</h2>
+                    <button class="btn btn-secondary" id="back-button">Back to Main</button>
+                </div>
+                <div class="table-container">
+                    <table class="maintenance-table">
+                        <thead>
+                            <tr>
+                                <th>Crane No.</th>
+                                <th>Task</th>
+                                <th>Time</th>
+                                <th>Notes</th>
+                                {% if can_delete %}
+                                <th>Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody id="maintenance-body">
+                        </tbody>
+                    </table>
+                    {% if can_edit %}
+                    <div class="table-actions">
+                        <button id="add-row-button" class="btn btn-primary">Add Row</button>
+                        <button id="save-maintenance" class="btn btn-success">Save Plan</button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // 권한 정보를 JavaScript에서 사용할 수 있도록 전달
+            window.userPermissions = {
+                isLoggedIn: {{ 'true' if is_logged_in else 'false' }},
+                canEdit: {{ 'true' if can_edit else 'false' }},
+                canDelete: {{ 'true' if can_delete else 'false' }},
+                canManage: {{ 'true' if can_manage else 'false' }}
+            };
+        </script>
+        <script src="{{ url_for('static', filename='plan.js') }}"></script>
+    </div>
+</body>
+</html>

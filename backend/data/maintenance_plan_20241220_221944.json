@@ -1,0 +1,22 @@
+{
+  "crane_type": "ARMGC",
+  "plan": [
+    {
+      "crane": "211",
+      "task": "ㅏㅏㅜ",
+      "start_time": "00:00",
+      "end_time": "15:00",
+      "notes": ""
+    },
+    {
+      "crane": "211",
+      "task": "ㅣㅣㅏㅏ",
+      "start_time": "00:00",
+      "end_time": "15:00",
+      "notes": ""
+    }
+  ],
+  "date": "2024-12-20",
+  "created_at": "2024-12-20T22:19:44.252126",
+  "created_by": "admin"
+}

@@ -1,0 +1,42 @@
+{
+  "date": "2024-12-19",
+  "crane_type": "QC",
+  "plan": [
+    {
+      "crane": "12",
+      "time": "morning",
+      "ship": "Ship 1"
+    },
+    {
+      "crane": "11",
+      "time": "morning",
+      "ship": "Ship 1"
+    },
+    {
+      "crane": "10",
+      "time": "morning",
+      "ship": "Ship 1"
+    },
+    {
+      "crane": "10",
+      "time": "afternoon",
+      "ship": "Ship 2"
+    },
+    {
+      "crane": "9",
+      "time": "afternoon",
+      "ship": "Ship 2"
+    },
+    {
+      "crane": "3",
+      "time": "afternoon",
+      "ship": "Ship 4"
+    },
+    {
+      "crane": "2",
+      "time": "afternoon",
+      "ship": "Ship 4"
+    }
+  ],
+  "created_at": "2024-12-19T09:35:18.268976"
+}

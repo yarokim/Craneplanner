@@ -1,0 +1,434 @@
+:root {
+    --background-color: #f9f9f9;
+    --container-background: white;
+    --box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    --hover-box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+    --border-radius: 10px;
+    --transition: all 0.3s ease;
+    --primary-color: #4CAF50;
+    --danger-color: #ff3b3b;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: var(--background-color);
+}
+
+#calendar-container, #maintenance-container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: var(--container-background);
+    border-radius: 10px;
+    box-shadow: var(--box-shadow);
+    transition: box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+#calendar-container:hover, #maintenance-container:hover {
+    box-shadow: var(--hover-box-shadow);
+    background-color: #f5f5f5;
+}
+
+/* 반응형 스타일 */
+@media (max-width: 768px) {
+    #calendar-container, #maintenance-container {
+        max-width: 100%;
+        margin: 10px;
+        padding: 15px;
+        box-shadow: none;
+    }
+
+    body {
+        font-size: 14px;
+    }
+}
+
+#button-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button img {
+    margin-right: 10px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* 달력 컨테이너 스타일 */
+#calendar-container {
+    background: white;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 달력 컨트롤 스타일 */
+.calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#month-year {
+    font-size: 1.2em;
+    font-weight: 500;
+}
+
+/* 달력 그리드 스타일 */
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+/* 요일 헤더 스타일 */
+.weekday-header {
+    text-align: center;
+    font-weight: 500;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: var(--border-radius);
+}
+
+/* 주말 스타일 */
+.weekday-header:first-child,
+.weekday-header:last-child,
+.calendar-day:nth-child(7n + 1),
+.calendar-day:nth-child(7n) {
+    color: var(--danger-color);
+}
+
+/* 달력 날짜 스타일 */
+.calendar-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+    border: 1px solid #eee;
+}
+
+.calendar-day:hover:not(.disabled) {
+    background: var(--primary-color);
+    color: white;
+}
+
+.calendar-day.today {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    font-weight: bold;
+}
+
+.calendar-day.disabled {
+    background: #f5f5f5;
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.calendar-day.empty {
+    border: none;
+    pointer-events: none;
+}
+
+.qc-use-info {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #333;
+    margin: 10px 0;
+    text-align: right;
+}
+
+.ship {
+    cursor: move;
+    user-select: none;
+    background-color: #4CAF50;  
+    color: white;  
+    border: none;  
+    padding: 4px 8px;  
+    margin: 2px;
+    border-radius: 3px;  
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    width: 40px;  
+    height: 24px;  
+    display: flex;  
+    align-items: center;  
+    justify-content: center;
+    font-size: 12px;  
+    font-weight: bold;  
+}
+
+.ship.dragging {
+    opacity: 0.7;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.grid-slot {
+    min-height: 32px;  
+    border: 1px dashed #ccc;  
+    margin: 2px;  
+    padding: 2px;  
+    transition: background-color 0.2s, border-color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.grid-slot.drag-over {
+    background-color: rgba(46, 204, 113, 0.1);
+    border-color: #2ecc71;
+}
+
+.ship-1 { background-color: #2196F3; }  
+.ship-2 { background-color: #4CAF50; }  
+.ship-3 { background-color: #f44336; }  
+.ship-4 { background-color: #9C27B0; }  
+.ship-5 { background-color: #FF9800; }  
+
+.delete-ship {
+    position: absolute;
+    right: -6px;
+    top: -6px;
+    width: 14px;
+    height: 14px;
+    background-color: #ff3b3b;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    opacity: 0;  
+    transition: opacity 0.2s;
+}
+
+.ship:hover .delete-ship {
+    opacity: 1;  
+}
+
+.delete-ship:hover {
+    background-color: #ff1111;
+}
+
+.assigned-ship {
+    width: 90%;
+    height: 80%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.assigned-ship::after {
+    content: '×';
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.assigned-ship:hover::after {
+    color: white;
+}
+
+.assigned-ship.ship-1 { background-color: #2196F3; }  
+.assigned-ship.ship-2 { background-color: #4CAF50; }  
+.assigned-ship.ship-3 { background-color: #f44336; }  
+.assigned-ship.ship-4 { background-color: #9C27B0; }  
+.assigned-ship.ship-5 { background-color: #FF9800; }  
+
+/* 섹션 헤더 스타일 */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.title-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.title-group h2 {
+    margin: 0;
+}
+
+.qc-use-info {
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #666;
+    background-color: #f5f5f5;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+/* Toast 메시지 스타일 */
+#toast {
+    visibility: hidden;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 250px;
+    padding: 15px 25px;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    border-radius: 4px;
+    z-index: 9999;
+    font-size: 14px;
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+#toast.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+#toast.success {
+    background-color: #28a745;
+}
+
+#toast.error {
+    background-color: #dc3545;
+}
+
+/* 삭제 버튼 스타일 */
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.delete-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+}
+
+.delete-row i {
+    font-size: 12px;
+}
+
+/* 시간 입력 컨테이너 스타일 */
+.time-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-container select {
+    width: 100px;
+}
+
+.form-control.start-time,
+.form-control.end-time {
+    padding: 4px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* 네비게이션 바 스타일 */
+.navbar {
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 10px 0;
+    margin-bottom: 20px;
+}
+
+.nav-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #333;
+}
+
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.username {
+    color: #333;
+    font-weight: 500;
+}
+
+.login-btn, .logout-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.3s;
+}
+
+.login-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.login-btn:hover {
+    background-color: #45a049;
+}
+
+.logout-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.logout-btn:hover {
+    background-color: #c82333;
+}

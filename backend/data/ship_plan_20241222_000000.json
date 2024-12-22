@@ -1,0 +1,51 @@
+{
+  "date": "2024-12-22",
+  "ships": [
+    {
+      "crane": "10",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "9",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "8",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "7",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "6",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "6",
+      "time": "afternoon",
+      "ship_number": "4"
+    },
+    {
+      "crane": "5",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "4",
+      "time": "morning",
+      "ship_number": "1"
+    },
+    {
+      "crane": "3",
+      "time": "morning",
+      "ship_number": "1"
+    }
+  ],
+  "created_at": "2024-12-22T19:35:06.786013"
+}

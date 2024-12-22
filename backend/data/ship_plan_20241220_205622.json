@@ -1,0 +1,21 @@
+{
+  "date": "2024-12-20",
+  "crane_type": "QC",
+  "ships": [
+    {
+      "slot_index": 0,
+      "ship_number": "1"
+    },
+    {
+      "slot_index": 2,
+      "ship_number": "1"
+    },
+    {
+      "slot_index": 4,
+      "ship_number": "1"
+    }
+  ],
+  "created_at": "2024-12-20T20:56:22.886651",
+  "updated_at": "2024-12-20T20:56:22.886651",
+  "created_by": "admin"
+}

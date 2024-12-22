@@ -1,0 +1,27 @@
+{
+  "date": "2024-12-19",
+  "crane_type": "QC",
+  "plan": [
+    {
+      "crane": "7",
+      "time": "morning",
+      "ship": ""
+    },
+    {
+      "crane": "6",
+      "time": "morning",
+      "ship": ""
+    },
+    {
+      "crane": "5",
+      "time": "afternoon",
+      "ship": ""
+    },
+    {
+      "crane": "3",
+      "time": "afternoon",
+      "ship": "Ship 5"
+    }
+  ],
+  "created_at": "2024-12-19T22:58:54.147005"
+}

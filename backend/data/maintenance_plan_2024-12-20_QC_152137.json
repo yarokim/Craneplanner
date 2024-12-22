@@ -1,0 +1,15 @@
+{
+  "date": "2024-12-20",
+  "crane_type": "QC",
+  "tasks": [
+    {
+      "crane": "101",
+      "task": "ㄴㄴㄴㄴ",
+      "start_time": "00:00",
+      "end_time": "00:00",
+      "notes": "ㄴㄴㄴㄴㄴ"
+    }
+  ],
+  "created_at": "2024-12-20T15:21:37.027248",
+  "created_by": "admin"
+}

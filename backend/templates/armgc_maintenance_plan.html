@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARMGC Maintenance Plan</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='maintenance.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="nav-brand">Crane Planner</div>
+            <div class="nav-user">
+                {% if is_logged_in %}
+                    <span class="username">{{ session['username'] }} ({{ session['role'] }})</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    <div class="wrapper">
+        <div class="container" id="operation-team-container">
+            <div class="operation-section">
+                <div class="page-info">
+                    <div class="info-item">
+                        <span class="info-label">Selected Date:</span>
+                        <span class="info-value date-value" id="selected-date"></span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Crane Type:</span>
+                        <span class="info-value">ARMGC</span>
+                    </div>
+                </div>
+                <div class="section-header">
+                    <h2>Operation Team</h2>
+                </div>
+                <div class="operation-content">
+                    <div class="operation-info">
+                        <div class="qc-usage">
+                            <label for="qc-usage-rate">QC 사용률: </label>
+                            <progress id="qc-usage-progress" value="0" max="100"></progress>
+                            <span id="qc-usage-rate">0%</span>
+                        </div>
+                        <div class="recommend-maintenance">
+                            <label for="recommend-crane-count">Recommend PMS / RMS: </label>
+                            <span id="recommend-crane-count">0 crane</span>
+                        </div>
+                        {% if can_edit %}
+                        <div class="final-maintenance">
+                            <label for="final-crane-count">Final PMS / RMS: </label>
+                            <input type="number" id="final-crane-count" min="0" max="12" value="0" class="form-control">
+                            <span>crane</span>
+                            <button id="save-final-maintenance" class="btn btn-primary">Save</button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="operation-notes">
+                        <label for="operation-notes-input">Notes:</label>
+                        <textarea id="operation-notes-input" class="form-control" 
+                                placeholder="Enter operation notes" rows="4"
+                                {% if not can_edit %}readonly{% endif %}></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="maintenance-wrapper">
+        <div class="container" id="maintenance-container">
+            <div class="section-header">
+                <h2>ARMGC Maintenance Plan</h2>
+                <button class="btn btn-secondary" id="back-button">Back to Main</button>
+            </div>
+            <div class="table-container">
+                <table class="maintenance-table">
+                    <thead>
+                        <tr>
+                            <th>Crane No.</th>
+                            <th>Task</th>
+                            <th>Time</th>
+                            <th>Notes</th>
+                            {% if can_delete %}
+                            <th>Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody id="maintenance-body">
+                    </tbody>
+                </table>
+                {% if can_edit %}
+                <div class="table-actions">
+                    <button id="add-row-button" class="btn btn-primary">Add Row</button>
+                    <button id="save-maintenance" class="btn btn-success">Save Plan</button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+    <script src="{{ url_for('static', filename='dateUtils.js') }}"></script>
+    <script src="{{ url_for('static', filename='maintenance.js') }}"></script>
+    <script>
+        // 권한 정보를 JavaScript에서 사용할 수 있도록 전달
+        window.userPermissions = {
+            isLoggedIn: {{ 'true' if is_logged_in else 'false' }},
+            canEdit: {{ 'true' if can_edit else 'false' }},
+            canDelete: {{ 'true' if can_delete else 'false' }},
+            canManage: {{ 'true' if can_manage else 'false' }}
+        };
+    </script>
+</body>
+</html>

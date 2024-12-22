@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crane Planner - QC Schedule</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .navbar {
+            background: #2c3e50;
+            padding: 12px 0;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-brand {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .username {
+            font-size: 14px;
+            color: #ecf0f1;
+        }
+        
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+        
+        .login-btn {
+            background: #2ecc71;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-content">
+            <div class="nav-brand">Crane Planner</div>
+            <div class="nav-user">
+                {% if is_logged_in %}
+                    <span class="username">{{ session['username'] }} ({{ session['role'] }})</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <h1>크레인 유형 선택</h1>
+        <p class="date-display">선택된 날짜: {{ selected_date }}</p>
+
+        <div class="crane-selection">
+            <div class="crane-option" id="qc-option">
+                <h3>QC 크레인</h3>
+                <p>컨테이너 선적 작업용</p>
+                <button class="btn btn-primary" id="qc-button">QC 선택</button>
+            </div>
+
+            <div class="crane-option" id="armgc-option">
+                <h3>ARMGC 크레인</h3>
+                <p>야드 작업용</p>
+                <button class="btn btn-primary" id="armgc-button">ARMGC 선택</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .crane-selection {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+        margin-top: 32px;
+    }
+
+    .crane-option {
+        text-align: center;
+        padding: 24px;
+        background: white;
+        border-radius: var(--border-radius);
+        transition: var(--transition);
+    }
+
+    .crane-option:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .date-display {
+        color: var(--primary-color);
+        font-size: 1.2em;
+        margin: 16px 0;
+    }
+    </style>
+
+    <script>
+        document.getElementById('qc-button').addEventListener('click', function () {
+            window.location.href = "{{ url_for('plan', date=selected_date, crane_type='QC') }}";
+        });
+
+        document.getElementById('armgc-button').addEventListener('click', function () {
+            window.location.href = "{{ url_for('armgc_maintenance', date=selected_date) }}";
+        });
+    </script>
+</body>
+</html>
