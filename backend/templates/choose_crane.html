@@ -86,8 +86,8 @@
         <h1>크레인 유형 선택</h1>
         <div class="date-info">선택된 날짜: {{ selected_date }}</div>
         <div class="crane-buttons">
-            <button class="crane-button armgc-button" onclick="location.href='{{ url_for('armgc_maintenance', date=selected_date) }}'">ARMGC</button>
             <button class="crane-button qc-button" onclick="location.href='{{ url_for('plan', date=selected_date, crane_type='QC') }}'">QC</button>
+            <button class="crane-button armgc-button" onclick="location.href='{{ url_for('armgc_maintenance', date=selected_date) }}'">ARMGC</button>
         </div>
     </div>
 </body>
