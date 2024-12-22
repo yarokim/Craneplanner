@@ -6,6 +6,40 @@
     <title>ARMGC Maintenance Plan</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='maintenance.css') }}">
+    <style>
+        /* Toast 메시지 스타일 */
+        #toast {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            max-width: 300px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #toast.success {
+            background-color: rgba(46, 204, 113, 0.9);
+        }
+
+        #toast.error {
+            background-color: rgba(231, 76, 60, 0.9);
+        }
+
+        #toast.warning {
+            background-color: rgba(241, 196, 15, 0.9);
+        }
+
+        #toast.show {
+            opacity: 1;
+        }
+    </style>
 </head>
 <body>
     <nav class="navbar">
