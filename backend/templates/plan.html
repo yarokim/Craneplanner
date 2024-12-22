@@ -143,6 +143,7 @@
             display: flex;
             overflow-x: auto;
             margin: 20px 0;
+            max-width: 100%;
         }
 
         .time-column {
@@ -151,7 +152,8 @@
             background: white;
             z-index: 1;
             border-right: 2px solid #eee;
-            min-width: 120px;
+            min-width: 100px;
+            max-width: 100px;
         }
 
         .time-header {
@@ -172,10 +174,12 @@
 
         .crane-grid {
             display: flex;
+            min-width: min-content;
         }
 
         .crane-column {
-            min-width: 120px;
+            min-width: 100px;
+            max-width: 100px;
             border-right: 1px solid #eee;
         }
 
@@ -485,6 +489,25 @@
             border-radius: 4px;
             font-size: 14px;
         }
+
+        /* 스크롤바 스타일링 */
+        .schedule-grid::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .schedule-grid::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .schedule-grid::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .schedule-grid::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body>
@@ -533,7 +556,7 @@
                 </div>
             </div>
 
-            <div class="ship-schedule-grid">
+            <div class="schedule-grid">
                 <div class="time-column">
                     <div class="time-header">Time</div>
                     <div class="time-slot">08:00 - 12:00</div>
