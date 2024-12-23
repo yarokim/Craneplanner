@@ -72,7 +72,7 @@
                     <h2>Operation Team</h2>
                 </div>
                 <div class="operation-content">
-                    <div class="operation-info">
+                    <div class="operation-left">
                         <div class="qc-usage">
                             <label for="qc-usage-rate">QC 사용률: </label>
                             <progress id="qc-usage-progress" value="0" max="100"></progress>
@@ -82,20 +82,27 @@
                             <label for="recommend-crane-count">Recommend PMS / RMS: </label>
                             <span id="recommend-crane-count">0 crane</span>
                         </div>
-                        {% if can_edit %}
                         <div class="final-maintenance">
                             <label for="final-crane-count">Final PMS / RMS: </label>
-                            <input type="number" id="final-crane-count" min="0" max="12" value="0" class="form-control">
+                            <input type="number" id="final-crane-count" min="0" max="12" value="0" class="form-control" {% if not is_logged_in %}readonly{% endif %}>
                             <span>crane</span>
+                            {% if is_logged_in %}
                             <button id="save-final-maintenance" class="btn btn-primary">Save</button>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
-                    <div class="operation-notes">
-                        <label for="operation-notes-input">Notes:</label>
-                        <textarea id="operation-notes-input" class="form-control" 
-                                placeholder="Enter operation notes" rows="4"
-                                {% if not can_edit %}readonly{% endif %}></textarea>
+                    <div class="operation-right">
+                        <div class="operation-notes">
+                            <div class="notes-header">
+                                <label for="operation-notes-input">Notes:</label>
+                                {% if is_logged_in %}
+                                <button id="save-operation-notes" class="btn btn-primary">Save Notes</button>
+                                {% endif %}
+                            </div>
+                            <textarea id="operation-notes-input" class="form-control" 
+                                    placeholder="Enter operation notes" rows="4"
+                                    {% if not is_logged_in %}readonly{% endif %}></textarea>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -112,10 +112,19 @@ function addMaintenanceRow(data = {}) {
 
     // Notes 셀
     const notesCell = document.createElement('td');
-    const notesInput = document.createElement('input');
-    notesInput.type = 'text';
+    const notesInput = document.createElement('textarea');
     notesInput.classList.add('notes-input', 'form-control');
     notesInput.placeholder = 'Enter notes';
+    notesInput.style.height = '36px';
+    notesInput.style.minHeight = '36px';
+    notesInput.style.maxHeight = '72px';
+    notesInput.style.resize = 'vertical';
+    notesInput.style.overflowY = 'auto';
+    notesInput.style.whiteSpace = 'pre-wrap';
+    notesInput.style.wordWrap = 'break-word';
+    notesInput.style.padding = '8px';
+    notesInput.style.lineHeight = '1.2';
+    notesInput.style.fontSize = '14px';
     if (data.notes) {
         notesInput.value = data.notes;
     }

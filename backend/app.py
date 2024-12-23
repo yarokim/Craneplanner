@@ -126,10 +126,9 @@ def is_valid_date(date_str: str) -> bool:
         bool: 유효성 여부
     """
     try:
-        date = parse_date(date_str)
-        # 현실적인 날짜 범위 검사 (2000년 ~ 2100년)
-        return 2000 <= date.year <= 2100
-    except (DateError, AttributeError):
+        parse_date(date_str)
+        return True
+    except DateError:
         return False
 
 def get_today() -> str:
@@ -568,6 +567,7 @@ def get_operation_notes():
 # QC 사용률을 저장할 전역 변수와 파일 경로
 qc_usage_data = {}
 QC_USAGE_FILE = os.path.join(DATA_DIR, 'qc_usage.json')
+FINAL_MAINTENANCE_FILE = os.path.join(DATA_DIR, 'final_maintenance.json')
 
 # QC 사용률 데이터 로드
 def load_qc_usage_data():
@@ -586,6 +586,66 @@ def save_qc_usage_data():
             json.dump(qc_usage_data, f, indent=2)
     except Exception as e:
         app.logger.error(f"Error saving QC usage data: {str(e)}")
+
+# Final PMS/RMS 저장 API
+@app.route('/api/save-final-maintenance', methods=['POST'])
+def save_final_maintenance():
+    try:
+        if not is_logged_in():
+            return jsonify({'error': 'Login required'}), 401
+
+        data = request.get_json()
+        date = data.get('date')
+        count = data.get('count')
+        
+        if not date or count is None:
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        # 날짜 형식 검증
+        try:
+            datetime.strptime(date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+            
+        final_maintenance_data = {}
+        if os.path.exists(FINAL_MAINTENANCE_FILE):
+            with open(FINAL_MAINTENANCE_FILE, 'r') as f:
+                final_maintenance_data = json.load(f)
+                
+        final_maintenance_data[date] = count
+        
+        with open(FINAL_MAINTENANCE_FILE, 'w') as f:
+            json.dump(final_maintenance_data, f)
+            
+        return jsonify({'message': 'Final maintenance count saved successfully'})
+    except Exception as e:
+        app.logger.error(f"Error in save_final_maintenance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Final PMS/RMS 조회 API
+@app.route('/api/get-final-maintenance', methods=['GET'])
+def get_final_maintenance():
+    try:
+        date = request.args.get('date')
+        if not date:
+            return jsonify({'error': 'Date is required'}), 400
+            
+        # 날짜 형식 검증
+        try:
+            datetime.strptime(date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({'error': 'Invalid date format'}), 400
+            
+        if os.path.exists(FINAL_MAINTENANCE_FILE):
+            with open(FINAL_MAINTENANCE_FILE, 'r') as f:
+                final_maintenance_data = json.load(f)
+                count = final_maintenance_data.get(date, 0)
+                return jsonify({'count': count})
+        
+        return jsonify({'count': 0})
+    except Exception as e:
+        app.logger.error(f"Error in get_final_maintenance: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # 서버 시작 시 QC 사용률 데이터 로드
 load_qc_usage_data()
@@ -613,4 +673,14 @@ if __name__ == '__main__':
     os.makedirs(DATA_DIR, exist_ok=True)
     # 서버 시작 시 오래된 데이터 정리
     cleanup_old_data()
-    app.run(debug=True)
+    
+    # Get IP address
+    import socket
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    
+    # Only start if it's the correct IP range
+    if ip_address.startswith('10.200.'):
+        app.run(host=ip_address, port=5000, debug=True)
+    else:
+        print("Error: This application must be run on the correct network (10.200.x.x)")

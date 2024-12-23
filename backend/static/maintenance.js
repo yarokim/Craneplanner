@@ -18,6 +18,19 @@ document.addEventListener('DOMContentLoaded', function () {
         duplicateCrane: '이미 선택된 크레인입니다.'
     };
 
+    // 날짜 포맷 유틸리티
+    const dateUtils = {
+        formatDateForAPI: function(date) {
+            if (typeof date === 'string') {
+                return date;
+            }
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    };
+
     // 토스트 메시지 표시
     function showToast(message, type = 'success') {
         const toast = document.getElementById('toast');
@@ -272,17 +285,57 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Final PMS/RMS 저장
     function saveFinalMaintenanceCount() {
+        if (!window.userPermissions.isLoggedIn) {
+            showToast('Please login to save changes', 'error');
+            return;
+        }
+
         const count = finalCraneCount.value;
-        localStorage.setItem('finalMaintenanceCount', count);
-        showToast('Final PMS/RMS가 저장되었습니다.', 'success');
+        const selectedDate = getSelectedDate();
+        
+        if (!selectedDate) {
+            showToast('날짜를 선택해주세요.', 'error');
+            return;
+        }
+
+        fetch('/api/save-final-maintenance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: dateUtils.formatDateForAPI(selectedDate),
+                count: parseInt(count)
+            })
+        })
+        .then(handleApiResponse)
+        .then(data => {
+            showToast('Final PMS/RMS가 저장되었습니다.', 'success');
+        })
+        .catch(error => {
+            console.error('Error saving final maintenance count:', error);
+            showToast('저장에 실패했습니다.', 'error');
+        });
     }
 
     // Final PMS/RMS 로드
     function loadFinalMaintenanceCount() {
-        const savedCount = localStorage.getItem('finalMaintenanceCount');
-        if (savedCount !== null) {
-            finalCraneCount.value = savedCount;
+        const selectedDate = getSelectedDate();
+        
+        if (!selectedDate) {
+            console.error('No date selected');
+            return;
         }
+
+        fetch(`/api/get-final-maintenance?date=${dateUtils.formatDateForAPI(selectedDate)}`)
+            .then(handleApiResponse)
+            .then(data => {
+                finalCraneCount.value = data.count;
+            })
+            .catch(error => {
+                console.error('Error loading final maintenance count:', error);
+                finalCraneCount.value = 0;
+            });
     }
 
     // QC 사용률에 따른 권장 크레인 수 계산
@@ -439,10 +492,19 @@ document.addEventListener('DOMContentLoaded', function () {
         timeContainer.appendChild(endTime);
 
         // Create notes input
-        const notesInput = document.createElement('input');
-        notesInput.type = 'text';
+        const notesInput = document.createElement('textarea');
         notesInput.className = 'form-control notes-input';
         notesInput.placeholder = 'Enter notes';
+        notesInput.style.height = '36px';
+        notesInput.style.minHeight = '36px';
+        notesInput.style.maxHeight = '72px';
+        notesInput.style.resize = 'vertical';
+        notesInput.style.overflowY = 'auto';
+        notesInput.style.whiteSpace = 'pre-wrap';
+        notesInput.style.wordWrap = 'break-word';
+        notesInput.style.padding = '8px';
+        notesInput.style.lineHeight = '1.2';
+        notesInput.style.fontSize = '14px';
 
         // Create delete button
         const deleteButton = document.createElement('button');
@@ -548,12 +610,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (backButton) {
         backButton.addEventListener('click', () => {
-            window.location.href = '/plan/' + getSelectedDate();
+            window.location.href = '/';
         });
     }
 
-    if (saveFinalMaintenance) {
-        saveFinalMaintenance.addEventListener('click', saveFinalMaintenanceCount);
+    const saveFinalMaintenanceButton = document.getElementById('save-final-maintenance');
+    if (saveFinalMaintenanceButton) {
+        saveFinalMaintenanceButton.addEventListener('click', saveFinalMaintenanceCount);
+    }
+
+    // Operation Notes 저장 버튼 이벤트 리스너
+    const saveOperationNotesButton = document.getElementById('save-operation-notes');
+    if (saveOperationNotesButton) {
+        saveOperationNotesButton.addEventListener('click', saveOperationNotes);
     }
 
     // 페이지 로드 시 초기화
@@ -561,4 +630,5 @@ document.addEventListener('DOMContentLoaded', function () {
     loadQCUsage();
     loadPlan();
     loadOperationNotes();
+    loadFinalMaintenanceCount();
 });

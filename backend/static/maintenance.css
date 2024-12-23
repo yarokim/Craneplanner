@@ -171,7 +171,30 @@ tr:hover td {
 /* Notes input */
 .notes-input {
     width: 100%;
-    min-width: 200px;
+    height: 36px;
+    min-height: 36px;
+    max-height: 72px;
+    resize: vertical;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 8px;
+    line-height: 1.2;
+    font-size: 14px;
+}
+
+.operation-notes textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 100px;
+    max-height: 150px;
+    resize: vertical;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    padding: 8px;
+    line-height: 1.2;
+    font-size: 14px;
 }
 
 /* Button styles */
@@ -187,6 +210,12 @@ tr:hover td {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.delete-button {
+    padding: 2px 8px;
+    font-size: 12px;
+    min-width: 50px;
 }
 
 .btn-primary {
@@ -256,86 +285,28 @@ tr:hover td {
 
 .operation-content {
     display: flex;
-    gap: 32px;
-    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px;
 }
 
-.operation-info {
+.operation-left {
     flex: 1;
-    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.operation-right {
+    flex: 1;
+    max-width: 400px;
 }
 
 .operation-notes {
-    flex: 1;
-    min-width: 300px;
-    max-width: 500px;
-}
-
-.operation-notes label {
-    display: block;
-    margin-bottom: 8px;
-    color: #333;
-    font-weight: 500;
-}
-
-.operation-notes textarea {
-    width: 100%;
-    resize: vertical;
-    min-height: 120px;
-    padding: 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 14px;
-    line-height: 1.5;
-}
-
-.operation-notes textarea:focus {
-    border-color: #2196F3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-    outline: none;
-}
-
-.qc-usage,
-.recommend-maintenance,
-.final-maintenance {
-    margin-bottom: 16px;
-}
-
-.qc-usage label,
-.recommend-maintenance label,
-.final-maintenance label {
-    display: inline-block;
-    min-width: 150px;
-    margin-right: 12px;
-}
-
-.operation-info {
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    padding: 16px 0;
-}
-
-.qc-usage, .recommend-maintenance, .final-maintenance {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.qc-usage progress {
-    flex: 1;
-    height: 8px;
-    border-radius: 4px;
-}
-
-.qc-usage progress::-webkit-progress-bar {
-    background-color: #f0f0f0;
-    border-radius: 4px;
-}
-
-.qc-usage progress::-webkit-progress-value {
-    background-color: #2196F3;
-    border-radius: 4px;
+    gap: 8px;
+    height: 100%;
 }
 
 /* Button group */
@@ -541,4 +512,16 @@ tr:hover td {
 
 .logout-btn:hover {
     background: #c0392b;
+}
+
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notes-header label {
+    margin: 0;
+    font-weight: bold;
 }
