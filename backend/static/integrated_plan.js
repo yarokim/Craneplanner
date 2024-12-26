@@ -41,6 +41,9 @@ function addMaintenanceRow(equipmentType, data = {}) {
                 ${createTimeOptions(data.endTime)}
             </select>
         </td>
+        <td>
+            <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Enter notes...">${data.notes || ''}</textarea>
+        </td>
     `;
     
     const actionButtons = `
@@ -214,6 +217,7 @@ async function saveMaintenancePlan(equipmentType) {
         const data = {
             startTime: row.querySelector('select[name="start-time"]').value,
             endTime: row.querySelector('select[name="end-time"]').value,
+            notes: row.querySelector('textarea[name="notes"]').value
         };
 
         if (equipmentType === 'mobile') {

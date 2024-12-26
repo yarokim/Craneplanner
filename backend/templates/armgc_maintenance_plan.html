@@ -150,6 +150,7 @@
                                             <th>유지보수 유형</th>
                                             <th>시작 시간</th>
                                             <th>종료 시간</th>
+                                            <th>Notes</th>
                                             <th>작업</th>
                                         </tr>
                                     </thead>
@@ -176,6 +177,7 @@
                                             <th>유지보수 유형</th>
                                             <th>시작 시간</th>
                                             <th>종료 시간</th>
+                                            <th>Notes</th>
                                             <th>작업</th>
                                         </tr>
                                     </thead>
@@ -203,6 +205,7 @@
                                             <th>유지보수 유형</th>
                                             <th>시작 시간</th>
                                             <th>종료 시간</th>
+                                            <th>Notes</th>
                                             <th>작업</th>
                                         </tr>
                                     </thead>
@@ -229,6 +232,7 @@
                                             <th>유지보수 유형</th>
                                             <th>시작 시간</th>
                                             <th>종료 시간</th>
+                                            <th>Notes</th>
                                             <th>작업</th>
                                         </tr>
                                     </thead>
@@ -285,6 +289,9 @@
                     </select>
                 </td>
                 <td>
+                    <textarea class="form-control form-control-sm" name="notes" rows="2" placeholder="Enter notes..."></textarea>
+                </td>
+                <td>
                     <button class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -329,7 +336,8 @@
                     craneNumber: row.querySelector('select[name="crane-number"]').value,
                     maintenanceType: row.querySelector('select[name="maintenance-type"]').value,
                     startTime: row.querySelector('select[name="start-time"]').value,
-                    endTime: row.querySelector('select[name="end-time"]').value
+                    endTime: row.querySelector('select[name="end-time"]').value,
+                    notes: row.querySelector('textarea[name="notes"]').value
                 };
                 
                 if (!data.craneNumber || !data.startTime || !data.endTime) {
@@ -428,6 +436,16 @@
         .btn-primary:hover {
             background-color: #0056b3;
             border-color: #0056b3;
+        }
+
+        textarea[name="notes"] {
+            min-height: 60px;
+            resize: vertical;
+            font-size: 0.875rem;
+        }
+
+        textarea[name="notes"]:focus {
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
         }
 
         @media (max-width: 768px) {
