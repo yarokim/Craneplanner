@@ -1,6 +1,6 @@
 // 전역 변수
 let selectedShip = null;
-let currentCraneType = 'qc';
+let currentEquipmentType = 'qc';
 
 // Toast 메시지 표시 함수
 function showToast(message, type = 'success') {
@@ -21,134 +21,202 @@ function showToast(message, type = 'success') {
     }, 3000);
 }
 
-// 크레인 타입 전환 함수
-function switchCraneType(type) {
-    currentCraneType = type;
-    const qcContent = document.getElementById('qc-content');
-    const armgcContent = document.getElementById('armgc-content');
-    const tabs = document.querySelectorAll('.crane-tab');
-    
-    tabs.forEach(tab => {
-        if (tab.dataset.type === type) {
-            tab.classList.add('active');
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-    
-    if (type === 'qc') {
-        qcContent.style.display = 'block';
-        armgcContent.style.display = 'none';
-        loadQCData();
-    } else {
-        qcContent.style.display = 'none';
-        armgcContent.style.display = 'block';
-        loadARMGCData();
-    }
-}
-
 // Maintenance Row 관련 함수들
-function addMaintenanceRow(data = {}, isARMGC = false) {
-    const maintenanceBody = document.getElementById(isARMGC ? 'armgc-maintenance-body' : 'maintenance-body');
-    const row = document.createElement('tr');
-    row.classList.add('maintenance-row');
-    
-    if (data.id) {
-        row.setAttribute('data-plan-id', data.id);
+function addMaintenanceRow(equipmentType, data = {}) {
+    if (!window.userPermissions.canEdit) {
+        showToast('유지보수 계획을 추가할 권한이 없습니다.', 'error');
+        return;
     }
 
-    // 크레인 선택 셀
-    const craneCell = document.createElement('td');
-    const craneSelect = document.createElement('select');
-    craneSelect.classList.add('crane-select', 'form-control');
+    const tbody = document.getElementById(`${equipmentType}-maintenance-body`);
+    const tr = document.createElement('tr');
     
-    for (let i = 1; i <= 12; i++) {
-        const option = document.createElement('option');
-        option.value = i;
-        option.textContent = `Crane ${i + (isARMGC ? 200 : 100)}`;
-        craneSelect.appendChild(option);
-    }
+    // 공통 필드
+    const timeFields = `
+        <td>
+            <input type="time" class="form-control" name="start-time" value="${data.startTime || ''}" required>
+        </td>
+        <td>
+            <input type="time" class="form-control" name="end-time" value="${data.endTime || ''}" required>
+        </td>
+    `;
     
-    if (data.crane_number) {
-        craneSelect.value = data.crane_number;
-    }
-    
-    craneCell.appendChild(craneSelect);
+    const actionButtons = `
+        <td>
+            <div class="btn-group">
+                <button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
 
-    // Task 셀
-    const taskCell = document.createElement('td');
-    const taskInput = document.createElement('input');
-    taskInput.type = 'text';
-    taskInput.classList.add('task-input', 'form-control');
-    taskInput.placeholder = 'Enter task description';
-    if (data.task) {
-        taskInput.value = data.task;
-    }
-    taskCell.appendChild(taskInput);
-
-    // Time 셀
-    const timeCell = document.createElement('td');
-    const timeContainer = document.createElement('div');
-    timeContainer.classList.add('time-input-container');
-    
-    const startTimeSelect = document.createElement('select');
-    startTimeSelect.classList.add('time-select', 'form-control');
-    
-    const endTimeSelect = document.createElement('select');
-    endTimeSelect.classList.add('time-select', 'form-control');
-    
-    const times = [];
-    for (let hour = 8; hour <= 18; hour++) {
-        times.push(`${hour.toString().padStart(2, '0')}:00`);
-    }
-    
-    times.forEach(time => {
-        const startOption = document.createElement('option');
-        startOption.value = time;
-        startOption.textContent = time;
-        startTimeSelect.appendChild(startOption);
-        
-        const endOption = document.createElement('option');
-        endOption.value = time;
-        endOption.textContent = time;
-        endTimeSelect.appendChild(endOption);
-    });
-    
-    if (data.start_time) {
-        startTimeSelect.value = data.start_time;
-    }
-    if (data.end_time) {
-        endTimeSelect.value = data.end_time;
-    }
-    
-    timeContainer.appendChild(startTimeSelect);
-    timeContainer.appendChild(document.createTextNode(' - '));
-    timeContainer.appendChild(endTimeSelect);
-    timeCell.appendChild(timeContainer);
-
-    // Actions 셀
-    const actionsCell = document.createElement('td');
-    if (window.userPermissions.isLoggedIn) {
-        const deleteBtn = document.createElement('button');
-        deleteBtn.classList.add('btn', 'btn-danger', 'delete-maintenance');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.onclick = () => {
-            if (confirm('Are you sure you want to delete this maintenance plan?')) {
-                row.remove();
-                if (data.id) {
-                    deleteMaintenancePlan(data.id, isARMGC);
-                }
-            }
-        };
-        actionsCell.appendChild(deleteBtn);
+    // 장비 유형별 특화 필드
+    let specificFields = '';
+    switch (equipmentType) {
+        case 'qc':
+        case 'armgc':
+            specificFields = `
+                <td>
+                    <input type="number" class="form-control" name="crane-number" min="1" value="${data.craneNumber || ''}" required>
+                </td>
+                <td>
+                    <select class="form-control" name="maintenance-type">
+                        <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
+                        <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
+                    </select>
+                </td>
+            `;
+            break;
+        case 'mobile':
+            specificFields = `
+                <td>
+                    <input type="text" class="form-control" name="equipment-number" value="${data.equipmentNumber || ''}" required>
+                </td>
+                <td>
+                    <select class="form-control" name="equipment-type">
+                        <option value="YT" ${data.equipmentType === 'YT' ? 'selected' : ''}>YT</option>
+                        <option value="FL" ${data.equipmentType === 'FL' ? 'selected' : ''}>FL</option>
+                        <option value="RS" ${data.equipmentType === 'RS' ? 'selected' : ''}>RS</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control" name="maintenance-type">
+                        <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
+                        <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
+                    </select>
+                </td>
+            `;
+            break;
+        case 'facility':
+            specificFields = `
+                <td>
+                    <input type="text" class="form-control" name="facility-name" value="${data.facilityName || ''}" required>
+                </td>
+                <td>
+                    <select class="form-control" name="maintenance-type">
+                        <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
+                        <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
+                    </select>
+                </td>
+            `;
+            break;
     }
 
-    row.appendChild(craneCell);
-    row.appendChild(taskCell);
-    row.appendChild(timeCell);
-    row.appendChild(actionsCell);
-    maintenanceBody.appendChild(row);
+    tr.innerHTML = specificFields + timeFields + actionButtons;
+    tbody.appendChild(tr);
 }
+
+async function saveMaintenancePlan(equipmentType) {
+    const maintenanceData = [];
+    const tbody = document.getElementById(`${equipmentType}-maintenance-body`);
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const data = {
+            startTime: row.querySelector('input[name="start-time"]').value,
+            endTime: row.querySelector('input[name="end-time"]').value,
+        };
+
+        if (equipmentType === 'mobile') {
+            data.equipmentNumber = row.querySelector('input[name="equipment-number"]').value;
+            data.equipmentType = row.querySelector('select[name="equipment-type"]').value;
+            data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
+        } else if (equipmentType === 'facility') {
+            data.facilityName = row.querySelector('input[name="facility-name"]').value;
+            data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
+        } else {
+            // QC와 ARMGC의 경우
+            data.craneNumber = row.querySelector('input[name="crane-number"]').value;
+            data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
+        }
+
+        maintenanceData.push(data);
+    }
+
+    const selectedDate = document.getElementById('datepicker').value;
+    const requestData = {
+        date: selectedDate,
+        equipmentType: equipmentType,
+        maintenanceData: maintenanceData
+    };
+
+    try {
+        const response = await fetch('/api/save-maintenance-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        });
+
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || '유지보수 계획 저장에 실패했습니다.');
+        }
+
+        showToast('유지보수 계획이 저장되었습니다.');
+    } catch (error) {
+        console.error('Error saving maintenance plan:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+async function loadMaintenancePlan(equipmentType) {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const date = urlParams.get('date');
+
+        const response = await fetch(`/api/get-maintenance-plan?date=${date}&equipment_type=${equipmentType}`);
+        if (!response.ok) {
+            throw new Error('유지보수 계획을 불러오는데 실패했습니다.');
+        }
+
+        const data = await response.json();
+        const tbody = document.getElementById(`${equipmentType}-maintenance-body`);
+        tbody.innerHTML = '';
+
+        data.plan.forEach(plan => {
+            addMaintenanceRow(equipmentType, plan);
+        });
+    } catch (error) {
+        console.error('Error loading maintenance plan:', error);
+        showToast(error.message, 'error');
+    }
+}
+
+// 이벤트 리스너 설정
+document.addEventListener('DOMContentLoaded', function() {
+    // 각 장비 유형별 초기 데이터 로드
+    loadMaintenancePlan('qc');
+    loadMaintenancePlan('armgc');
+    loadMaintenancePlan('mobile');
+    loadMaintenancePlan('facility');
+
+    // 탭 변경 이벤트
+    document.querySelectorAll('.nav-link').forEach(tab => {
+        tab.addEventListener('click', function() {
+            const equipmentType = this.id.replace('-tab', '');
+            loadMaintenancePlan(equipmentType);
+        });
+    });
+
+    // 유지보수 추가 버튼 이벤트
+    document.querySelectorAll('[id$="-maintenance"] button').forEach(button => {
+        button.addEventListener('click', () => {
+            const equipmentType = button.closest('.tab-pane').id.replace('-content', '');
+            addMaintenanceRow(equipmentType);
+        });
+    });
+
+    // 기존 이벤트 리스너 유지
+    setupShipPlanGrid();
+    setupShipDragAndDrop();
+    updateDisplayDate();
+    loadQCData();
+    loadShipPlan();
+});
 
 // Save Maintenance Plan
 async function saveMaintenancePlan(isARMGC = false) {
@@ -264,86 +332,134 @@ async function updateQCUsagePercentage() {
 
 // Final Maintenance 관련 함수들
 async function saveFinalMaintenance() {
+    if (!window.userPermissions.canEdit) {
+        showToast('You do not have permission to save the final maintenance', 'error');
+        return;
+    }
+
     const finalCount = document.getElementById('final-crane-count').value;
+    const urlParams = new URLSearchParams(window.location.search);
+    const date = urlParams.get('date');
+    const craneType = currentEquipmentType; // 'qc' 또는 'armgc'
+
     try {
-        const response = await fetch('/api/save_final_maintenance', {
+        const response = await fetch(`/api/save_final_maintenance?date=${date}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 count: parseInt(finalCount),
-                date: document.getElementById('selected-date').dataset.date
+                crane_type: craneType
             })
         });
         
         if (!response.ok) {
-            throw new Error('Failed to save final maintenance count');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to save final maintenance count');
         }
         
         showToast('Final maintenance count saved successfully');
     } catch (error) {
         console.error('Error saving final maintenance:', error);
-        showToast('Failed to save final maintenance count', 'error');
+        showToast(error.message, 'error');
+    }
+}
+
+async function loadFinalMaintenance() {
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const date = urlParams.get('date');
+        const craneType = currentEquipmentType;
+
+        const response = await fetch(`/api/get_final_maintenance?date=${date}&crane_type=${craneType}`);
+        if (!response.ok) {
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to load final maintenance count');
+        }
+        
+        const data = await response.json();
+        const finalCountInput = document.getElementById('final-crane-count');
+        if (finalCountInput && data.count !== null) {
+            finalCountInput.value = data.count;
+        }
+    } catch (error) {
+        console.error('Error loading final maintenance:', error);
+        showToast(error.message, 'error');
     }
 }
 
 // Notes 관련 함수들
 async function saveOperationNotes() {
+    if (!window.userPermissions.canEdit) {
+        showToast('You do not have permission to save operation notes', 'error');
+        return;
+    }
+
     const notes = document.getElementById('operation-notes').value;
+    const urlParams = new URLSearchParams(window.location.search);
+    const date = urlParams.get('date');
+
     try {
-        const response = await fetch('/api/save_operation_notes', {
+        const response = await fetch(`/api/save_operation_notes?date=${date}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                notes: notes,
-                date: document.getElementById('selected-date').dataset.date
+                notes: notes
             })
         });
         
         if (!response.ok) {
-            throw new Error('Failed to save operation notes');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to save operation notes');
         }
         
         showToast('Operation notes saved successfully');
     } catch (error) {
         console.error('Error saving operation notes:', error);
-        showToast('Failed to save operation notes', 'error');
+        showToast(error.message, 'error');
     }
 }
 
 async function loadOperationNotes() {
     try {
-        const response = await fetch('/api/get_operation_notes');
+        const urlParams = new URLSearchParams(window.location.search);
+        const date = urlParams.get('date');
+
+        const response = await fetch(`/api/get_operation_notes?date=${date}`);
         if (!response.ok) {
-            throw new Error('Failed to load operation notes');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to load operation notes');
         }
         
         const data = await response.json();
         const notesTextarea = document.getElementById('operation-notes');
-        if (notesTextarea && data.notes) {
-            notesTextarea.value = data.notes;
+        if (notesTextarea) {
+            notesTextarea.value = data.notes || '';
         }
     } catch (error) {
         console.error('Error loading operation notes:', error);
+        showToast(error.message, 'error');
     }
 }
 
 // 데이터 로드 함수들
 async function loadQCData() {
     await Promise.all([
-        loadMaintenancePlan(false),
+        loadMaintenancePlan('qc'),
         updateQCUsagePercentage(),
-        loadOperationNotes()
+        loadOperationNotes(),
+        loadFinalMaintenance()
     ]);
 }
 
 async function loadARMGCData() {
     await Promise.all([
-        loadMaintenancePlan(true),
-        loadOperationNotes()
+        loadMaintenancePlan('armgc'),
+        loadOperationNotes(),
+        loadFinalMaintenance()
     ]);
 }
 
@@ -560,8 +676,8 @@ async function saveShipPlan() {
         const ship = slot.querySelector('.ship');
         if (ship) {
             shipPlan.push({
-                ship_name: ship.textContent,
-                crane_number: parseInt(slot.getAttribute('data-crane')),
+                shipName: ship.textContent,
+                craneNumber: parseInt(slot.getAttribute('data-crane')),
                 time: slot.getAttribute('data-time')
             });
         }
@@ -571,23 +687,24 @@ async function saveShipPlan() {
         const urlParams = new URLSearchParams(window.location.search);
         const date = urlParams.get('date');
 
-        const response = await fetch('/api/save-ship-plan', {
+        const response = await fetch(`/api/save-ship-plan?date=${date}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                date: date,
-                plan: shipPlan
+                shipPlan: shipPlan
             })
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save ship plan');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to save ship plan');
         }
 
         showToast('Ship plan saved successfully');
     } catch (error) {
+        console.error('Error saving ship plan:', error);
         showToast(error.message, 'error');
     }
 }
@@ -599,44 +716,30 @@ async function loadShipPlan() {
 
         const response = await fetch(`/api/get-ship-plan?date=${date}`);
         if (!response.ok) {
-            throw new Error('Failed to load ship plan');
+            const data = await response.json();
+            throw new Error(data.error || 'Failed to load ship plan');
         }
 
-        const data = await response.json();
+        const plans = await response.json();
         
-        // 모든 슬롯 초기화
+        // 먼저 모든 슬롯 초기화
         clearAllSlots();
-
-        // 선박 배치
-        data.plan.forEach(item => {
-            const slot = document.querySelector(`.grid-slot[data-crane="${item.crane_number}"][data-time="${item.time}"]`);
+        
+        // 각 계획을 슬롯에 배치
+        plans.forEach(plan => {
+            const slot = document.querySelector(`.grid-slot[data-crane="${plan.craneNumber}"][data-time="${plan.time}"]`);
             if (slot) {
-                const shipClass = item.ship_name.toLowerCase().replace(/\s+/g, '-');
                 const shipTemplate = document.createElement('div');
-                shipTemplate.className = `ship ${shipClass}`;
-                shipTemplate.textContent = item.ship_name;
-                shipTemplate.draggable = false;
-
-                // 삭제 버튼 추가
-                if (window.userPermissions.canEdit) {
-                    const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'delete-btn';
-                    deleteBtn.innerHTML = '×';
-                    deleteBtn.onclick = function(e) {
-                        e.stopPropagation();
-                        shipTemplate.remove();
-                        deleteBtn.remove();
-                        updateQCUsagePercentage();
-                    };
-                    slot.appendChild(deleteBtn);
-                }
-
-                slot.appendChild(shipTemplate);
+                shipTemplate.className = 'ship';
+                shipTemplate.textContent = plan.shipName;
+                shipTemplate.draggable = true;
+                placeShipInSlot(slot, shipTemplate);
             }
         });
-
+        
         updateQCUsagePercentage();
     } catch (error) {
+        console.error('Error loading ship plan:', error);
         showToast(error.message, 'error');
     }
 }
@@ -655,57 +758,3 @@ function updateDisplayDate() {
         dateInfo.textContent = formattedDate;
     }
 }
-
-// 이벤트 리스너 설정
-document.addEventListener('DOMContentLoaded', function() {
-    // 크레인 타입 전환 탭 이벤트
-    document.querySelectorAll('.crane-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            switchCraneType(tab.dataset.type);
-        });
-    });
-
-    // Add Maintenance 버튼 이벤트
-    const addMaintenanceBtn = document.getElementById('add-maintenance');
-    if (addMaintenanceBtn) {
-        addMaintenanceBtn.addEventListener('click', () => addMaintenanceRow({}, false));
-    }
-
-    const addARMGCMaintenanceBtn = document.getElementById('add-armgc-maintenance');
-    if (addARMGCMaintenanceBtn) {
-        addARMGCMaintenanceBtn.addEventListener('click', () => addMaintenanceRow({}, true));
-    }
-
-    // Save Final Maintenance 버튼 이벤트
-    const saveFinalMaintenanceBtn = document.getElementById('save-final-maintenance');
-    if (saveFinalMaintenanceBtn) {
-        saveFinalMaintenanceBtn.addEventListener('click', saveFinalMaintenance);
-    }
-
-    // Save Notes 버튼 이벤트
-    const saveNotesBtn = document.getElementById('save-operation-notes');
-    if (saveNotesBtn) {
-        saveNotesBtn.addEventListener('click', saveOperationNotes);
-    }
-
-    // Ship Plan 초기화
-    setupShipPlanGrid();
-    setupShipDragAndDrop();
-    updateDisplayDate();
-
-    // Save Ship Plan 버튼 이벤트
-    const saveShipPlanBtn = document.getElementById('save-ship-plan');
-    if (saveShipPlanBtn) {
-        saveShipPlanBtn.addEventListener('click', saveShipPlan);
-    }
-
-    // Clear All 버튼 이벤트
-    const clearShipPlanBtn = document.getElementById('clear-ship-plan');
-    if (clearShipPlanBtn) {
-        clearShipPlanBtn.addEventListener('click', clearAllSlots);
-    }
-
-    // 초기 데이터 로드
-    loadQCData();
-    loadShipPlan();
-});

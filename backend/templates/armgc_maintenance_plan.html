@@ -110,32 +110,134 @@
     </div>
     <div class="maintenance-wrapper">
         <div class="container" id="maintenance-container">
-            <div class="section-header">
-                <h2>ARMGC Maintenance Plan</h2>
-                <button class="btn btn-secondary" id="back-button">Back to Main</button>
-            </div>
-            <div class="table-container">
-                <table class="maintenance-table">
-                    <thead>
-                        <tr>
-                            <th>Crane No.</th>
-                            <th>Task</th>
-                            <th>Time</th>
-                            <th>Notes</th>
-                            {% if can_delete %}
-                            <th>Actions</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody id="maintenance-body">
-                    </tbody>
-                </table>
-                {% if can_edit %}
-                <div class="table-actions">
-                    <button id="add-row-button" class="btn btn-primary">Add Row</button>
-                    <button id="save-maintenance" class="btn btn-success">Save Plan</button>
+            <div class="maintenance-section mt-4">
+                <h3 class="section-title">크레인 유지보수 계획</h3>
+                
+                <!-- 장비 유형 탭 -->
+                <div class="equipment-tabs">
+                    <div class="nav nav-tabs" id="equipment-nav" role="tablist">
+                        <button class="nav-link active" id="qc-tab" data-bs-toggle="tab" data-bs-target="#qc-content" type="button" role="tab">
+                            QC
+                        </button>
+                        <button class="nav-link" id="armgc-tab" data-bs-toggle="tab" data-bs-target="#armgc-content" type="button" role="tab">
+                            ARMGC
+                        </button>
+                        <button class="nav-link" id="mobile-tab" data-bs-toggle="tab" data-bs-target="#mobile-content" type="button" role="tab">
+                            이동장비
+                        </button>
+                        <button class="nav-link" id="facility-tab" data-bs-toggle="tab" data-bs-target="#facility-content" type="button" role="tab">
+                            시설
+                        </button>
+                    </div>
                 </div>
-                {% endif %}
+
+                <!-- 탭 컨텐츠 -->
+                <div class="tab-content" id="equipment-content">
+                    <!-- QC 탭 -->
+                    <div class="tab-pane fade show active" id="qc-content" role="tabpanel">
+                        <div class="maintenance-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>QC 유지보수 계획</h5>
+                                <button class="btn btn-primary btn-sm" onclick="addMaintenanceRow('qc')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                            </div>
+                            <div class="maintenance-table-container">
+                                <table class="table table-bordered maintenance-table" id="qc-maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>크레인 번호</th>
+                                            <th>유지보수 유형</th>
+                                            <th>시작 시간</th>
+                                            <th>종료 시간</th>
+                                            <th>작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="qc-maintenance-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ARMGC 탭 -->
+                    <div class="tab-pane fade" id="armgc-content" role="tabpanel">
+                        <div class="maintenance-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>ARMGC 유지보수 계획</h5>
+                                <button class="btn btn-primary btn-sm" onclick="addMaintenanceRow('armgc')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                            </div>
+                            <div class="maintenance-table-container">
+                                <table class="table table-bordered maintenance-table" id="armgc-maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>크레인 번호</th>
+                                            <th>유지보수 유형</th>
+                                            <th>시작 시간</th>
+                                            <th>종료 시간</th>
+                                            <th>작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="armgc-maintenance-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 이동장비 탭 -->
+                    <div class="tab-pane fade" id="mobile-content" role="tabpanel">
+                        <div class="maintenance-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>이동장비 유지보수 계획</h5>
+                                <button class="btn btn-primary btn-sm" onclick="addMaintenanceRow('mobile')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                            </div>
+                            <div class="maintenance-table-container">
+                                <table class="table table-bordered maintenance-table" id="mobile-maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>장비 번호</th>
+                                            <th>장비 유형</th>
+                                            <th>유지보수 유형</th>
+                                            <th>시작 시간</th>
+                                            <th>종료 시간</th>
+                                            <th>작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="mobile-maintenance-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 시설 탭 -->
+                    <div class="tab-pane fade" id="facility-content" role="tabpanel">
+                        <div class="maintenance-card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5>시설 유지보수 계획</h5>
+                                <button class="btn btn-primary btn-sm" onclick="addMaintenanceRow('facility')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                            </div>
+                            <div class="maintenance-table-container">
+                                <table class="table table-bordered maintenance-table" id="facility-maintenance-table">
+                                    <thead>
+                                        <tr>
+                                            <th>시설명</th>
+                                            <th>유지보수 유형</th>
+                                            <th>시작 시간</th>
+                                            <th>종료 시간</th>
+                                            <th>작업</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="facility-maintenance-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -151,5 +253,87 @@
             canManage: {{ 'true' if can_manage else 'false' }}
         };
     </script>
+    <style>
+        .maintenance-section {
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .section-title {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        .equipment-tabs {
+            margin-bottom: 20px;
+        }
+
+        .nav-tabs .nav-link {
+            color: #6c757d;
+            border: none;
+            padding: 10px 20px;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+            font-weight: 500;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #2c3e50;
+            background-color: #fff;
+            border-bottom: 3px solid #007bff;
+        }
+
+        .maintenance-card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .maintenance-table-container {
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .maintenance-table th {
+            background-color: #f8f9fa;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .maintenance-table td {
+            vertical-align: middle;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .nav-tabs .nav-link {
+                white-space: nowrap;
+            }
+        }
+    </style>
 </body>
 </html>

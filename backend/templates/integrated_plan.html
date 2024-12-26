@@ -488,50 +488,132 @@
             </div>
 
             <div class="bottom-panel">
-                <div class="crane-tabs">
-                    <button class="crane-tab active" data-type="qc">QC Schedule</button>
-                    <button class="crane-tab" data-type="armgc">ARMGC Maintenance</button>
-                </div>
-
-                <!-- QC Schedule Content -->
-                <div id="qc-content" class="crane-content active">
-                    <div class="maintenance-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Crane</th>
-                                    <th>Task</th>
-                                    <th>Time</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="maintenance-body">
-                            </tbody>
-                        </table>
-                        {% if is_logged_in %}
-                        <button id="add-maintenance" class="btn btn-primary">Add Maintenance</button>
-                        {% endif %}
+                <div class="maintenance-section mt-4">
+                    <h3 class="section-title mb-4">크레인 유지보수 계획</h3>
+                    
+                    <!-- QC 섹션 -->
+                    <div class="maintenance-card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>QC 유지보수 계획</h5>
+                            <div>
+                                {% if can_edit %}
+                                <button class="btn btn-primary btn-sm me-2" onclick="addMaintenanceRow('qc')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="saveMaintenancePlan('qc')">
+                                    <i class="fas fa-save"></i> 저장
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="maintenance-table-container">
+                            <table class="table table-bordered maintenance-table" id="qc-maintenance-table">
+                                <thead>
+                                    <tr>
+                                        <th>크레인 번호</th>
+                                        <th>유지보수 유형</th>
+                                        <th>시작 시간</th>
+                                        <th>종료 시간</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="qc-maintenance-body"></tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
 
-                <!-- ARMGC Maintenance Content -->
-                <div id="armgc-content" class="crane-content" style="display: none;">
-                    <div class="maintenance-table">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Crane</th>
-                                    <th>Task</th>
-                                    <th>Time</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="armgc-maintenance-body">
-                            </tbody>
-                        </table>
-                        {% if is_logged_in %}
-                        <button id="add-armgc-maintenance" class="btn btn-primary">Add Maintenance</button>
-                        {% endif %}
+                    <!-- ARMGC 섹션 -->
+                    <div class="maintenance-card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>ARMGC 유지보수 계획</h5>
+                            <div>
+                                {% if can_edit %}
+                                <button class="btn btn-primary btn-sm me-2" onclick="addMaintenanceRow('armgc')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="saveMaintenancePlan('armgc')">
+                                    <i class="fas fa-save"></i> 저장
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="maintenance-table-container">
+                            <table class="table table-bordered maintenance-table" id="armgc-maintenance-table">
+                                <thead>
+                                    <tr>
+                                        <th>크레인 번호</th>
+                                        <th>유지보수 유형</th>
+                                        <th>시작 시간</th>
+                                        <th>종료 시간</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="armgc-maintenance-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 이동장비 섹션 -->
+                    <div class="maintenance-card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>이동장비 유지보수 계획</h5>
+                            <div>
+                                {% if can_edit %}
+                                <button class="btn btn-primary btn-sm me-2" onclick="addMaintenanceRow('mobile')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="saveMaintenancePlan('mobile')">
+                                    <i class="fas fa-save"></i> 저장
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="maintenance-table-container">
+                            <table class="table table-bordered maintenance-table" id="mobile-maintenance-table">
+                                <thead>
+                                    <tr>
+                                        <th>장비 번호</th>
+                                        <th>장비 유형</th>
+                                        <th>유지보수 유형</th>
+                                        <th>시작 시간</th>
+                                        <th>종료 시간</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mobile-maintenance-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 시설 섹션 -->
+                    <div class="maintenance-card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>시설 유지보수 계획</h5>
+                            <div>
+                                {% if can_edit %}
+                                <button class="btn btn-primary btn-sm me-2" onclick="addMaintenanceRow('facility')">
+                                    <i class="fas fa-plus"></i> 유지보수 추가
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="saveMaintenancePlan('facility')">
+                                    <i class="fas fa-save"></i> 저장
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="maintenance-table-container">
+                            <table class="table table-bordered maintenance-table" id="facility-maintenance-table">
+                                <thead>
+                                    <tr>
+                                        <th>시설명</th>
+                                        <th>유지보수 유형</th>
+                                        <th>시작 시간</th>
+                                        <th>종료 시간</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="facility-maintenance-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

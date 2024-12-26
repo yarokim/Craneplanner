@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "created_at": "2024-12-26T21:48:03.890559",
+    "last_modified": "2024-12-26T21:48:20.127796",
+    "version": "1.0"
+  },
+  "plans": {
+    "ship": [],
+    "qc": [],
+    "armgc": []
+  },
+  "final_maintenance": {
+    "qc": 1,
+    "armgc": null
+  },
+  "operation_notes": "ㅁㄴㅇㄹㄴㅇㄹ"
+}

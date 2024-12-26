@@ -194,17 +194,20 @@ def logout():
 def cleanup_old_data():
     """2주 이상 된 데이터 정리"""
     two_weeks_ago = datetime.now() - timedelta(weeks=2)
+    
     for filename in os.listdir(DATA_DIR):
-        if filename.endswith('.json'):
-            file_path = os.path.join(DATA_DIR, filename)
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    created_at = datetime.fromisoformat(data.get('created_at', ''))
-                    if created_at < two_weeks_ago:
-                        os.remove(file_path)
-            except (json.JSONDecodeError, ValueError, OSError):
-                continue
+        if not filename.endswith('_integrated_plan.json'):
+            continue
+            
+        file_path = os.path.join(DATA_DIR, filename)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                created_at = datetime.fromisoformat(data['metadata']['created_at'])
+                if created_at < two_weeks_ago:
+                    os.remove(file_path)
+        except (json.JSONDecodeError, ValueError, OSError, KeyError):
+            continue
 
 # 홈 경로: 달력 페이지 렌더링
 @app.route('/')
@@ -234,75 +237,297 @@ def integrated_plan(date):
                          session=session)
 
 # API 엔드포인트들
-@app.route('/api/save_maintenance_plan', methods=['POST'])
+@app.route('/api/save-maintenance-plan', methods=['POST'])
 def save_maintenance_plan():
     if not is_logged_in() or 'edit' not in get_user_permissions():
         return jsonify({'error': 'Unauthorized'}), 401
 
     try:
         data = request.get_json()
-        plans = data.get('plans', [])
-        crane_type = data.get('crane_type', 'qc')  # 'qc' 또는 'armgc'
+        date_str = data.get('date', get_today())
+        equipment_type = data.get('equipment_type')
+        plan = data.get('plan', [])
         
-        # 날짜 정보 가져오기
-        date_str = request.args.get('date', get_today())
-        
-        # 파일명 설정
-        filename = f"{date_str}_{crane_type}_maintenance.json"
+        if not equipment_type:
+            return jsonify({'error': 'Equipment type is required'}), 400
+            
+        # 통합 파일명 설정 (날짜별 단일 파일)
+        filename = f"{date_str}_integrated_plan.json"
         filepath = os.path.join(DATA_DIR, filename)
+        
+        # 기존 데이터 로드 또는 새로운 구조 생성
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'last_modified': datetime.now().isoformat(),
+                    'version': '1.0'
+                },
+                'plans': {
+                    'ship': [],
+                    'qc': [],
+                    'armgc': [],
+                    'mobile': [],
+                    'facility': []
+                },
+                'final_maintenance': {
+                    'qc': None,
+                    'armgc': None
+                },
+                'operation_notes': ''
+            }
+        
+        # 데이터 업데이트
+        existing_data['plans'][equipment_type] = plan
+        existing_data['metadata']['last_modified'] = datetime.now().isoformat()
         
         # 데이터 저장
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(plans, f, ensure_ascii=False, indent=2)
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
         
-        return jsonify({'message': 'Success', 'plans': plans})
+        return jsonify({'message': 'Success', 'plan': plan})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/get_maintenance_plans', methods=['GET'])
-def get_maintenance_plans():
+@app.route('/api/get-maintenance-plan', methods=['GET'])
+def get_maintenance_plan():
     try:
         date_str = request.args.get('date', get_today())
-        crane_type = request.args.get('crane_type', 'qc')  # 'qc' 또는 'armgc'
+        equipment_type = request.args.get('equipment_type')
         
-        filename = f"{date_str}_{crane_type}_maintenance.json"
+        if not equipment_type:
+            return jsonify({'error': 'Equipment type is required'}), 400
+            
+        filename = f"{date_str}_integrated_plan.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify({'plan': []})
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        plan = data.get('plans', {}).get(equipment_type, [])
+        return jsonify({'plan': plan})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/save-ship-plan', methods=['POST'])
+def save_ship_plan():
+    if not is_logged_in() or 'edit' not in get_user_permissions():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.get_json()
+        ship_plan = data.get('shipPlan', [])
+        date_str = request.args.get('date', get_today())
+        
+        # 통합 파일명 설정 (날짜별 단일 파일)
+        filename = f"{date_str}_integrated_plan.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        # 기존 데이터 로드 또는 새로운 구조 생성
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'last_modified': datetime.now().isoformat(),
+                    'version': '1.0'
+                },
+                'plans': {
+                    'ship': [],
+                    'qc': [],
+                    'armgc': [],
+                    'mobile': [],
+                    'facility': []
+                },
+                'final_maintenance': {
+                    'qc': None,
+                    'armgc': None
+                },
+                'operation_notes': ''
+            }
+        
+        # 데이터 업데이트
+        existing_data['plans']['ship'] = ship_plan
+        existing_data['metadata']['last_modified'] = datetime.now().isoformat()
+        
+        # 데이터 저장
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': 'Success', 'plans': ship_plan})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get-ship-plan', methods=['GET'])
+def get_ship_plan():
+    try:
+        date_str = request.args.get('date', get_today())
+        
+        filename = f"{date_str}_integrated_plan.json"
         filepath = os.path.join(DATA_DIR, filename)
         
         if not os.path.exists(filepath):
             return jsonify([])
         
         with open(filepath, 'r', encoding='utf-8') as f:
-            plans = json.load(f)
-        
+            data = json.load(f)
+            
+        # ship plan 데이터만 반환
+        plans = data.get('plans', {}).get('ship', [])
         return jsonify(plans)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/delete_maintenance_plan/<plan_id>', methods=['DELETE'])
-def delete_maintenance_plan(plan_id):
+@app.route('/api/save_final_maintenance', methods=['POST'])
+def save_final_maintenance():
     if not is_logged_in() or 'edit' not in get_user_permissions():
         return jsonify({'error': 'Unauthorized'}), 401
 
     try:
+        data = request.get_json()
+        count = data.get('count')
+        date_str = data.get('date', get_today())
+        crane_type = data.get('crane_type', 'qc')  # 'qc' 또는 'armgc'
+        
+        if count is None:
+            return jsonify({'error': 'Count is required'}), 400
+            
+        # 통합 파일명 설정 (날짜별 단일 파일)
+        filename = f"{date_str}_integrated_plan.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        # 기존 데이터 로드 또는 새로운 구조 생성
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'last_modified': datetime.now().isoformat(),
+                    'version': '1.0'
+                },
+                'plans': {
+                    'ship': [],
+                    'qc': [],
+                    'armgc': [],
+                    'mobile': [],
+                    'facility': []
+                },
+                'final_maintenance': {
+                    'qc': None,
+                    'armgc': None
+                },
+                'operation_notes': ''
+            }
+        
+        # 데이터 업데이트
+        existing_data['final_maintenance'][crane_type] = count
+        existing_data['metadata']['last_modified'] = datetime.now().isoformat()
+        
+        # 데이터 저장
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': 'Success', 'count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get_final_maintenance', methods=['GET'])
+def get_final_maintenance():
+    try:
         date_str = request.args.get('date', get_today())
         crane_type = request.args.get('crane_type', 'qc')
         
-        filename = f"{date_str}_{crane_type}_maintenance.json"
+        filename = f"{date_str}_integrated_plan.json"
         filepath = os.path.join(DATA_DIR, filename)
         
         if not os.path.exists(filepath):
-            return jsonify({'error': 'Plan not found'}), 404
+            return jsonify({'count': None})
         
         with open(filepath, 'r', encoding='utf-8') as f:
-            plans = json.load(f)
+            data = json.load(f)
+            
+        count = data.get('final_maintenance', {}).get(crane_type)
+        return jsonify({'count': count})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/save_operation_notes', methods=['POST'])
+def save_operation_notes():
+    if not is_logged_in() or 'edit' not in get_user_permissions():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.get_json()
+        notes = data.get('notes', '')
+        date_str = data.get('date', get_today())
         
-        # plan_id로 계획 찾아서 제거
-        plans = [p for p in plans if p.get('id') != plan_id]
+        # 통합 파일명 설정 (날짜별 단일 파일)
+        filename = f"{date_str}_integrated_plan.json"
+        filepath = os.path.join(DATA_DIR, filename)
         
+        # 기존 데이터 로드 또는 새로운 구조 생성
+        if os.path.exists(filepath):
+            with open(filepath, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {
+                'metadata': {
+                    'created_at': datetime.now().isoformat(),
+                    'last_modified': datetime.now().isoformat(),
+                    'version': '1.0'
+                },
+                'plans': {
+                    'ship': [],
+                    'qc': [],
+                    'armgc': [],
+                    'mobile': [],
+                    'facility': []
+                },
+                'final_maintenance': {
+                    'qc': None,
+                    'armgc': None
+                },
+                'operation_notes': ''
+            }
+        
+        # 데이터 업데이트
+        existing_data['operation_notes'] = notes
+        existing_data['metadata']['last_modified'] = datetime.now().isoformat()
+        
+        # 데이터 저장
         with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(plans, f, ensure_ascii=False, indent=2)
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
         
-        return jsonify({'message': 'Success'})
+        return jsonify({'message': 'Success', 'notes': notes})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get_operation_notes', methods=['GET'])
+def get_operation_notes():
+    try:
+        date_str = request.args.get('date', get_today())
+        
+        filename = f"{date_str}_integrated_plan.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify({'notes': ''})
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        notes = data.get('operation_notes', '')
+        return jsonify({'notes': notes})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
