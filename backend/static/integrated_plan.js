@@ -3,48 +3,44 @@ let selectedShip = null;
 let currentEquipmentType = 'qc';
 
 // Toast 메시지 표시 함수
-function showToast(message, type = 'success') {
-    const toast = document.getElementById('toast');
-    if (!toast) {
-        console.error('Toast element not found');
-        return;
-    }
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast position-fixed bottom-0 end-0 m-3 bg-${type === 'success' ? 'success' : 'danger'} text-white`;
+    toast.setAttribute('role', 'alert');
+    toast.innerHTML = `
+        <div class="toast-body">
+            ${message}
+        </div>
+    `;
+    document.body.appendChild(toast);
     
-    toast.className = 'toast';
-    void toast.offsetWidth;
+    const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+    bsToast.show();
     
-    toast.textContent = message;
-    toast.className = `toast ${type} show`;
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 3000);
+    toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+    });
 }
 
 // Maintenance Row 관련 함수들
 function addMaintenanceRow(equipmentType, data = {}) {
-    if (!window.userPermissions.canEdit) {
-        showToast('유지보수 계획을 추가할 권한이 없습니다.', 'error');
-        return;
-    }
-
     const tbody = document.getElementById(`${equipmentType}-maintenance-body`);
-    const tr = document.createElement('tr');
+    const row = document.createElement('tr');
     
     // 공통 필드
     const timeFields = `
         <td>
-            <input type="time" class="form-control" name="start-time" value="${data.startTime || ''}" required>
+            <input type="time" class="form-control form-control-sm" name="start-time" value="${data.startTime || ''}" required>
         </td>
         <td>
-            <input type="time" class="form-control" name="end-time" value="${data.endTime || ''}" required>
+            <input type="time" class="form-control form-control-sm" name="end-time" value="${data.endTime || ''}" required>
         </td>
     `;
     
     const actionButtons = `
         <td>
-            <div class="btn-group">
-                <button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-danger" onclick="this.closest('tr').remove()">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -58,10 +54,13 @@ function addMaintenanceRow(equipmentType, data = {}) {
         case 'armgc':
             specificFields = `
                 <td>
-                    <input type="number" class="form-control" name="crane-number" min="1" value="${data.craneNumber || ''}" required>
+                    <select class="form-control form-control-sm" name="crane-number" required>
+                        <option value="">Select Crane</option>
+                        ${createCraneOptions(equipmentType, data.craneNumber)}
+                    </select>
                 </td>
                 <td>
-                    <select class="form-control" name="maintenance-type">
+                    <select class="form-control form-control-sm" name="maintenance-type">
                         <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
                         <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
                     </select>
@@ -71,17 +70,17 @@ function addMaintenanceRow(equipmentType, data = {}) {
         case 'mobile':
             specificFields = `
                 <td>
-                    <input type="text" class="form-control" name="equipment-number" value="${data.equipmentNumber || ''}" required>
+                    <input type="text" class="form-control form-control-sm" name="equipment-number" value="${data.equipmentNumber || ''}" required>
                 </td>
                 <td>
-                    <select class="form-control" name="equipment-type">
-                        <option value="YT" ${data.equipmentType === 'YT' ? 'selected' : ''}>YT</option>
-                        <option value="FL" ${data.equipmentType === 'FL' ? 'selected' : ''}>FL</option>
-                        <option value="RS" ${data.equipmentType === 'RS' ? 'selected' : ''}>RS</option>
+                    <select class="form-control form-control-sm" name="equipment-type">
+                        <option value="YT" ${data.equipmentType === 'YT' ? 'selected' : ''}>Yard Tractor</option>
+                        <option value="FL" ${data.equipmentType === 'FL' ? 'selected' : ''}>Forklift</option>
+                        <option value="RS" ${data.equipmentType === 'RS' ? 'selected' : ''}>Reach Stacker</option>
                     </select>
                 </td>
                 <td>
-                    <select class="form-control" name="maintenance-type">
+                    <select class="form-control form-control-sm" name="maintenance-type">
                         <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
                         <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
                     </select>
@@ -91,10 +90,10 @@ function addMaintenanceRow(equipmentType, data = {}) {
         case 'facility':
             specificFields = `
                 <td>
-                    <input type="text" class="form-control" name="facility-name" value="${data.facilityName || ''}" required>
+                    <input type="text" class="form-control form-control-sm" name="facility-name" value="${data.facilityName || ''}" required>
                 </td>
                 <td>
-                    <select class="form-control" name="maintenance-type">
+                    <select class="form-control form-control-sm" name="maintenance-type">
                         <option value="PMS" ${data.maintenanceType === 'PMS' ? 'selected' : ''}>PMS</option>
                         <option value="RMS" ${data.maintenanceType === 'RMS' ? 'selected' : ''}>RMS</option>
                     </select>
@@ -103,8 +102,67 @@ function addMaintenanceRow(equipmentType, data = {}) {
             break;
     }
 
-    tr.innerHTML = specificFields + timeFields + actionButtons;
-    tbody.appendChild(tr);
+    row.innerHTML = specificFields + timeFields + actionButtons;
+    tbody.appendChild(row);
+}
+
+// Crane numbers configuration
+const CRANE_NUMBERS = {
+    qc: Array.from({length: 12}, (_, i) => 101 + i),
+    armgc: [
+        // Block A
+        211, 212, 213, 214, 215, 216,
+        // Block B
+        221, 222, 223, 224, 225, 226,
+        // Block C
+        231, 232, 233, 234, 235, 236,
+        // Block D
+        241, 242, 243, 244, 245, 246,
+        // Block E
+        251, 252, 253, 254, 255, 256,
+        // Block F
+        261, 262, 263, 264, 265, 266,
+        // Block G
+        271, 272
+    ]
+};
+
+// Block name mapping
+const BLOCK_NAMES = {
+    210: 'A',
+    220: 'B',
+    230: 'C',
+    240: 'D',
+    250: 'E',
+    260: 'F',
+    270: 'G'
+};
+
+// Create crane number select options
+function createCraneOptions(craneType, selectedValue = '') {
+    if (craneType === 'qc') {
+        return CRANE_NUMBERS.qc.map(num => 
+            `<option value="${num}" ${selectedValue == num ? 'selected' : ''}>QC ${num}</option>`
+        ).join('');
+    } else if (craneType === 'armgc') {
+        let options = [];
+        let currentBlock = Math.floor(CRANE_NUMBERS.armgc[0] / 10) * 10;
+        
+        options.push(`<optgroup label="Block ${BLOCK_NAMES[currentBlock]}">`);
+        CRANE_NUMBERS.armgc.forEach(num => {
+            const block = Math.floor(num / 10) * 10;
+            if (block !== currentBlock) {
+                options.push('</optgroup>');
+                options.push(`<optgroup label="Block ${BLOCK_NAMES[block]}">`);
+                currentBlock = block;
+            }
+            options.push(`<option value="${num}" ${selectedValue == num ? 'selected' : ''}>ARMGC ${num}</option>`);
+        });
+        options.push('</optgroup>');
+        
+        return options.join('');
+    }
+    return '';
 }
 
 async function saveMaintenancePlan(equipmentType) {
@@ -128,7 +186,7 @@ async function saveMaintenancePlan(equipmentType) {
             data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
         } else {
             // QC와 ARMGC의 경우
-            data.craneNumber = row.querySelector('input[name="crane-number"]').value;
+            data.craneNumber = row.querySelector('select[name="crane-number"]').value;
             data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
         }
 
@@ -142,25 +200,26 @@ async function saveMaintenancePlan(equipmentType) {
         maintenanceData: maintenanceData
     };
 
-    try {
-        const response = await fetch('/api/save-maintenance-plan', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestData)
-        });
-
-        if (!response.ok) {
-            const data = await response.json();
-            throw new Error(data.error || '유지보수 계획 저장에 실패했습니다.');
+    fetch('/api/save-maintenance-plan', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('Maintenance plan saved successfully', 'success');
+            loadMaintenancePlan(equipmentType);
+        } else {
+            showToast('Failed to save maintenance plan', 'error');
         }
-
-        showToast('유지보수 계획이 저장되었습니다.');
-    } catch (error) {
-        console.error('Error saving maintenance plan:', error);
-        showToast(error.message, 'error');
-    }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showToast('Failed to save maintenance plan', 'error');
+    });
 }
 
 async function loadMaintenancePlan(equipmentType) {
@@ -170,7 +229,7 @@ async function loadMaintenancePlan(equipmentType) {
 
         const response = await fetch(`/api/get-maintenance-plan?date=${date}&equipment_type=${equipmentType}`);
         if (!response.ok) {
-            throw new Error('유지보수 계획을 불러오는데 실패했습니다.');
+            throw new Error('Failed to load maintenance plan');
         }
 
         const data = await response.json();
@@ -182,7 +241,7 @@ async function loadMaintenancePlan(equipmentType) {
         });
     } catch (error) {
         console.error('Error loading maintenance plan:', error);
-        showToast(error.message, 'error');
+        showToast('Failed to load maintenance plan', 'error');
     }
 }
 
@@ -254,7 +313,7 @@ async function saveMaintenancePlan(isARMGC = false) {
         }
         
         const result = await response.json();
-        showToast('Maintenance plan saved successfully');
+        showToast('Maintenance plan saved successfully', 'success');
         return result;
     } catch (error) {
         console.error('Error saving maintenance plan:', error);
@@ -262,7 +321,6 @@ async function saveMaintenancePlan(isARMGC = false) {
     }
 }
 
-// Load Maintenance Plan
 async function loadMaintenancePlan(isARMGC = false) {
     try {
         const response = await fetch(`/api/get_maintenance_plans?crane_type=${isARMGC ? 'armgc' : 'qc'}`);
@@ -283,7 +341,6 @@ async function loadMaintenancePlan(isARMGC = false) {
     }
 }
 
-// Delete Maintenance Plan
 async function deleteMaintenancePlan(planId, isARMGC = false) {
     try {
         const response = await fetch(`/api/delete_maintenance_plan/${planId}?crane_type=${isARMGC ? 'armgc' : 'qc'}`, {
@@ -294,7 +351,7 @@ async function deleteMaintenancePlan(planId, isARMGC = false) {
             throw new Error('Failed to delete maintenance plan');
         }
         
-        showToast('Maintenance plan deleted successfully');
+        showToast('Maintenance plan deleted successfully', 'success');
     } catch (error) {
         console.error('Error deleting maintenance plan:', error);
         showToast('Failed to delete maintenance plan', 'error');
@@ -359,7 +416,7 @@ async function saveFinalMaintenance() {
             throw new Error(data.error || 'Failed to save final maintenance count');
         }
         
-        showToast('Final maintenance count saved successfully');
+        showToast('Final maintenance count saved successfully', 'success');
     } catch (error) {
         console.error('Error saving final maintenance:', error);
         showToast(error.message, 'error');
@@ -416,7 +473,7 @@ async function saveOperationNotes() {
             throw new Error(data.error || 'Failed to save operation notes');
         }
         
-        showToast('Operation notes saved successfully');
+        showToast('Operation notes saved successfully', 'success');
     } catch (error) {
         console.error('Error saving operation notes:', error);
         showToast(error.message, 'error');
@@ -702,7 +759,7 @@ async function saveShipPlan() {
             throw new Error(data.error || 'Failed to save ship plan');
         }
 
-        showToast('Ship plan saved successfully');
+        showToast('Ship plan saved successfully', 'success');
     } catch (error) {
         console.error('Error saving ship plan:', error);
         showToast(error.message, 'error');
