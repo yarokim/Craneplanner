@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crane Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='maintenance.css') }}">
+    <style>
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .crane-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .crane-tab {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .crane-tab.active {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: auto 1fr;
+            gap: 20px;
+        }
+
+        .left-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            grid-row: 1 / 2;
+            grid-column: 1 / 2;
+        }
+
+        .center-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            grid-row: 1 / 2;
+            grid-column: 2 / 3;
+        }
+
+        .right-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            grid-row: 1 / 2;
+            grid-column: 3 / 4;
+        }
+
+        .bottom-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            grid-row: 2 / 3;
+            grid-column: 1 / 4;
+        }
+
+        .qc-usage {
+            margin-bottom: 20px;
+        }
+
+        .qc-usage progress {
+            width: 100%;
+            height: 20px;
+            margin: 10px 0;
+        }
+
+        .maintenance-info {
+            margin-bottom: 20px;
+        }
+
+        .notes-section {
+            height: 100%;
+        }
+
+        .notes-section textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 10px;
+            resize: vertical;
+        }
+
+        .ship-plan-section {
+            margin-bottom: 20px;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(11, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+        }
+
+        .grid-slot {
+            border: 1px solid #ddd;
+            padding: 10px;
+            min-height: 60px;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .grid-slot.header {
+            background: #e9ecef;
+            font-weight: bold;
+            min-height: 40px;
+        }
+
+        .grid-slot.drag-over {
+            background-color: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+
+        .ship-list {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .ship {
+            background-color: #4CAF50;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: move;
+            font-size: 0.85em;
+            width: fit-content;
+            position: relative;
+            user-select: none;
+        }
+
+        .ship[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .ship-1 { background-color: #4CAF50; }
+        .ship-2 { background-color: #2196F3; }
+        .ship-3 { background-color: #f44336; }
+        .ship-4 { background-color: #9C27B0; }
+        .ship-5 { background-color: #FF9800; }
+
+        .schedule-grid {
+            display: flex;
+            overflow-x: auto;
+            margin: 20px 0;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-column {
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 1;
+            border-right: 2px solid #eee;
+            min-width: 120px;
+        }
+
+        .time-header {
+            padding: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .time-slot {
+            height: 100px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .crane-grid {
+            display: flex;
+            min-width: min-content;
+        }
+
+        .crane-column {
+            min-width: 120px;
+            border-right: 1px solid #eee;
+        }
+
+        .crane-header {
+            padding: 8px;
+            background: #f8f9fa;
+            text-align: center;
+            font-weight: 500;
+            border-bottom: 1px solid #eee;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .grid-slot {
+            height: 100px;
+            border: 1px solid #eee;
+            transition: all 0.2s;
+            position: relative;
+            background-color: white;
+        }
+
+        .grid-slot.drag-over {
+            background-color: #e3f2fd;
+            border: 2px dashed #2196f3;
+        }
+
+        .grid-slot[disabled] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+
+        .grid-slot .ship {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: default;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .grid-slot .delete-ship {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 20px;
+            height: 20px;
+            background: rgba(244, 67, 54, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .grid-slot:hover .delete-ship {
+            opacity: 1;
+        }
+
+        /* Toast 메시지 스타일 */
+        #toast {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            max-width: 300px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        #toast.success {
+            background-color: rgba(46, 204, 113, 0.9);
+        }
+
+        #toast.error {
+            background-color: rgba(231, 76, 60, 0.9);
+        }
+
+        #toast.show {
+            opacity: 1;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .title-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qc-usage {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .qc-usage progress {
+            width: 100px;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .qc-usage progress::-webkit-progress-bar {
+            background-color: #f0f0f0;
+        }
+
+        .qc-usage progress::-webkit-progress-value {
+            background-color: #4CAF50;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #d68910;
+        }
+
+        .btn-success {
+            background-color: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="toast"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Crane Planner</h1>
+            <div class="header-actions">
+                {% if is_logged_in %}
+                    <span class="username">{{ session['username'] }} ({{ session['role'] }})</span>
+                    <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="login-btn">Login</a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="page-info">
+            <div class="info-item">
+                <span class="info-label">Selected Date:</span>
+                <span class="info-value date-value" id="selected-date" data-date="{{ selected_date }}">{{ selected_date }}</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="qc-usage">
+                    <h3>QC Usage</h3>
+                    <progress id="qc-usage-progress" value="0" max="100"></progress>
+                    <span id="qc-usage-rate">0%</span>
+                </div>
+
+                <div class="maintenance-info">
+                    <h3>Maintenance Information</h3>
+                    <div class="recommend-maintenance">
+                        <label>Recommend PMS / RMS:</label>
+                        <span id="recommend-crane-count">0 crane</span>
+                    </div>
+                    <div class="final-maintenance">
+                        <label>Final PMS / RMS:</label>
+                        <input type="number" id="final-crane-count" min="0" max="12" value="0" class="form-control" {% if not is_logged_in %}readonly{% endif %}>
+                        <span>crane</span>
+                        {% if is_logged_in %}
+                        <button id="save-final-maintenance" class="btn btn-primary">Save</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="center-panel">
+                <div class="ship-plan-section">
+                    <div class="section-header">
+                        <div class="title-group">
+                            <h3>Ship Plan</h3>
+                            <div class="date-info"></div>
+                        </div>
+                        <div class="qc-usage">
+                            <label for="qc-usage-progress">QC 사용률: </label>
+                            <progress id="qc-usage-progress" value="0" max="100"></progress>
+                            <span id="qc-usage-rate">0%</span>
+                        </div>
+                        <div class="header-controls">
+                            <div class="ship-list">
+                                {% for i in range(1, 6) %}
+                                <div class="ship ship-{{ i }}" draggable="true" data-ship="{{ i }}" {% if not can_edit %}disabled{% endif %}>
+                                    Ship {{ i }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if can_edit %}
+                                <button id="clear-ship-plan" class="btn btn-warning">Clear All</button>
+                                <button id="save-ship-plan" class="btn btn-success">Save Ship Plan</button>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="schedule-grid">
+                        <div class="time-column">
+                            <!-- Time slots will be added by JavaScript -->
+                        </div>
+                        <div class="crane-grid">
+                            <!-- Crane columns will be added by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="notes-section">
+                    <h3>Notes</h3>
+                    <textarea id="operation-notes" class="form-control" {% if not is_logged_in %}readonly{% endif %}></textarea>
+                    {% if is_logged_in %}
+                    <button id="save-operation-notes" class="btn btn-primary">Save Notes</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="bottom-panel">
+                <div class="crane-tabs">
+                    <button class="crane-tab active" data-type="qc">QC Schedule</button>
+                    <button class="crane-tab" data-type="armgc">ARMGC Maintenance</button>
+                </div>
+
+                <!-- QC Schedule Content -->
+                <div id="qc-content" class="crane-content active">
+                    <div class="maintenance-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Crane</th>
+                                    <th>Task</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="maintenance-body">
+                            </tbody>
+                        </table>
+                        {% if is_logged_in %}
+                        <button id="add-maintenance" class="btn btn-primary">Add Maintenance</button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ARMGC Maintenance Content -->
+                <div id="armgc-content" class="crane-content" style="display: none;">
+                    <div class="maintenance-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Crane</th>
+                                    <th>Task</th>
+                                    <th>Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="armgc-maintenance-body">
+                            </tbody>
+                        </table>
+                        {% if is_logged_in %}
+                        <button id="add-armgc-maintenance" class="btn btn-primary">Add Maintenance</button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='integrated_plan.js') }}"></script>
+    <script>
+        // 권한 정보를 JavaScript에서 사용할 수 있도록 전달
+        window.userPermissions = {
+            isLoggedIn: {{ 'true' if is_logged_in else 'false' }},
+            canEdit: {{ 'true' if can_edit else 'false' }},
+            role: "{{ session.get('role', '') }}"
+        };
+    </script>
+</body>
+</html>

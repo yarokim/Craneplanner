@@ -209,467 +209,105 @@ def cleanup_old_data():
 # 홈 경로: 달력 페이지 렌더링
 @app.route('/')
 def calendar():
-    permissions = get_user_permissions()
+    if not is_logged_in():
+        return redirect(url_for('login'))
     return render_template('calendar.html', 
                          is_logged_in=is_logged_in(),
-                         can_edit='edit' in permissions,
-                         can_delete='delete' in permissions,
-                         can_manage='manage_users' in permissions)
+                         can_edit='edit' in get_user_permissions(),
+                         session=session)
 
-# QC 스케줄 선택 페이지
-@app.route('/qc_schedule/<date>')
-def qc_schedule(date):
-    try:
-        # 날짜 형식 검증
-        datetime.strptime(date, '%Y-%m-%d')
-        return render_template('qc_schedule.html', 
-                             date=date,
-                             is_logged_in=is_logged_in(),
-                             can_edit='edit' in get_user_permissions(),
-                             can_delete='delete' in get_user_permissions())
-    except ValueError:
-        return redirect(url_for('calendar'))
-
-# 계획 페이지 (QC 또는 ARMGC에 따라 다름)
-@app.route('/plan/<date>/<crane_type>')
-def plan(date, crane_type):
-    try:
-        # 날짜 형식 검증
-        datetime.strptime(date, '%Y-%m-%d')
-        if crane_type.upper() not in ['QC', 'ARMGC']:
-            return redirect(url_for('calendar'))
-            
-        return render_template('plan.html', 
-                             date=date,
-                             crane_type=crane_type.upper(),
-                             is_logged_in=is_logged_in(),
-                             can_edit='edit' in get_user_permissions(),
-                             can_delete='delete' in get_user_permissions())
-    except ValueError:
-        return redirect(url_for('calendar'))
-
-# ARMGC 유지보수 계획 페이지
-@app.route('/armgc_maintenance')
-@app.route('/armgc_maintenance/<date>')
-def armgc_maintenance(date=None):
-    try:
-        if date:
-            datetime.strptime(date, '%Y-%m-%d')
-        else:
-            date = datetime.now().strftime('%Y-%m-%d')
-    except ValueError:
-        date = datetime.now().strftime('%Y-%m-%d')
-        
-    permissions = get_user_permissions()
-    return render_template('armgc_maintenance_plan.html',
-                         date=date,
-                         is_logged_in=is_logged_in(),
-                         can_edit='edit' in permissions,
-                         can_delete='delete' in permissions)
-
-# 데이터 저장 함수
-def save_plan_to_json(data):
-    """데이터를 JSON 파일로 저장"""
-    try:
-        # 날짜 형식 변환 (YYYY-MM-DD -> YYYYMMDD_HHMMSS)
-        date_str = data.get('date')
-        if not date_str:
-            raise ValueError("Date is required")
-            
-        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-        file_date = date_obj.strftime('%Y%m%d_%H%M%S')
-        
-        # 파일명 생성
-        filename = f"ship_plan_{file_date}.json"
-        filepath = os.path.join(DATA_DIR, filename)
-        
-        # 저장 시간 추가
-        data['created_at'] = datetime.now().isoformat()
-        
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            
-        return {
-            'success': True,
-            'message': '저장되었습니다.',
-            'filename': filename,
-            'saved_at': data['created_at']
-        }
-    except Exception as e:
-        return {
-            'success': False,
-            'message': str(e)
-        }
-
-# API 엔드포인트들
-@app.route('/api/save-ship-plan', methods=['POST'])
-@requires_permission('edit')
-def save_ship_plan():
-    try:
-        data = request.get_json()
-        
-        # 날짜 형식 검증
-        date_str = data.get('date')
-        try:
-            datetime.strptime(date_str, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({
-                'success': False,
-                'message': '잘못된 날짜 형식입니다. YYYY-MM-DD 형식을 사용해주세요.'
-            }), 400
-            
-        result = save_plan_to_json(data)
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
-
-@app.route('/api/save-maintenance-plan', methods=['POST'])
-@requires_permission('edit')
-def save_maintenance_plan():
-    try:
-        data = request.get_json()
-        date = data.get('date')
-        plans = data.get('plans', [])
-        
-        if not date:
-            return jsonify({'success': False, 'message': 'Date is required'}), 400
-            
-        if not is_valid_date(date):
-            return jsonify({'success': False, 'message': 'Invalid date format or value'}), 400
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            return jsonify({'success': False, 'message': 'Failed to normalize date'}), 400
-            
-        # 파일명 생성
-        filename = f'maintenance_plan_{normalized_date}.json'
-        file_path = os.path.join(DATA_DIR, filename)
-        
-        # 새로운 데이터로 완전히 대체
-        save_data = {
-            'date': normalized_date,
-            'created_at': datetime.now().isoformat(),
-            'plans': plans
-        }
-        
-        # 데이터 저장
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(save_data, f, indent=2, ensure_ascii=False)
-            
-        return jsonify({'success': True, 'message': 'Maintenance plan saved successfully'}), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error saving maintenance plan: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/delete-maintenance-plan/<plan_id>', methods=['DELETE'])
-@requires_permission('delete')
-def delete_maintenance_plan(plan_id):
-    try:
-        file_path = os.path.join(DATA_DIR, f"maintenance_plan_{plan_id}.json")
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            return jsonify({'success': True, 'message': 'Plan deleted successfully'})
-        return jsonify({'success': False, 'message': 'Plan not found'}), 404
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-@app.route('/api/get-plans/<plan_type>', methods=['GET'])
-def get_plans(plan_type):
-    try:
-        plans = []
-        prefix = 'ship_plan_' if plan_type == 'ship' else 'maintenance_plan_'
-        requested_date = request.args.get('date')
-        
-        for filename in os.listdir(DATA_DIR):
-            if filename.startswith(prefix) and filename.endswith('.json'):
-                file_path = os.path.join(DATA_DIR, filename)
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    plan_data = json.load(f)
-                    # 날짜가 지정된 경우 해당 날짜의 계획만 반환
-                    if requested_date and plan_data.get('date') != requested_date:
-                        continue
-                    plans.append(plan_data)
-        
-        # 생성일자 기준으로 정렬
-        plans.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-        return jsonify({'success': True, 'plans': plans})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-@app.route('/api/get-maintenance-plans', methods=['GET'])
-def get_maintenance_plans():
-    try:
-        date = request.args.get('date')
-        app.logger.info(f"Fetching maintenance plans for date: {date}")
-        
-        if not date:
-            app.logger.error("Date parameter is missing")
-            return jsonify({'success': False, 'message': 'Date parameter is required'}), 400
-            
-        if not is_valid_date(date):
-            app.logger.error(f"Invalid date format: {date}")
-            return jsonify({'success': False, 'message': 'Invalid date format or value'}), 400
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            app.logger.error(f"Failed to normalize date: {date}")
-            return jsonify({'success': False, 'message': 'Failed to normalize date'}), 400
-
-        app.logger.info(f"Normalized date: {normalized_date}")
-
-        # 해당 날짜의 모든 계획 데이터 로드
-        plans = []
-        prefix = 'maintenance_plan_'
-        
-        app.logger.info(f"Searching for files in {DATA_DIR}")
-        for filename in os.listdir(DATA_DIR):
-            if filename.startswith(prefix) and filename.endswith('.json'):
-                file_path = os.path.join(DATA_DIR, filename)
-                app.logger.info(f"Found file: {filename}")
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        plan_data = json.load(f)
-                        plan_date = normalize_date(plan_data.get('date'))
-                        app.logger.info(f"File date: {plan_date}, Looking for date: {normalized_date}")
-                        if plan_date == normalized_date:
-                            app.logger.info(f"Found matching plans: {plan_data.get('plans', [])}")
-                            plans.extend(plan_data.get('plans', []))
-                except Exception as e:
-                    app.logger.error(f"Error reading file {filename}: {str(e)}")
-                    continue
-        
-        app.logger.info(f"Returning {len(plans)} plans")
-        return jsonify({'success': True, 'plans': plans}), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error getting maintenance plans: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/get-qc-usage')
-def get_qc_usage():
-    try:
-        with open(os.path.join(DATA_DIR, 'ship_plan.json'), 'r') as f:
-            data = json.load(f)
-            qc_usage = data.get('qcUsage', 0)
-            return jsonify({'qcUsage': qc_usage})
-    except FileNotFoundError:
-        return jsonify({'qcUsage': 0})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/get-ship-plans', methods=['GET'])
-def get_ship_plans():
-    try:
-        date = request.args.get('date')
-        if not date:
-            return jsonify({'success': False, 'message': 'Date parameter is required'}), 400
-            
-        if not is_valid_date(date):
-            return jsonify({'success': False, 'message': 'Invalid date format or value'}), 400
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            return jsonify({'success': False, 'message': 'Failed to normalize date'}), 400
-
-        # 해당 날짜의 모든 계획 데이터 로드
-        plans = []
-        prefix = 'ship_plan_'
-        
-        for filename in os.listdir(DATA_DIR):
-            if filename.startswith(prefix) and filename.endswith('.json'):
-                file_path = os.path.join(DATA_DIR, filename)
-                try:
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        plan_data = json.load(f)
-                        plan_date = normalize_date(plan_data.get('date'))
-                        if plan_date == normalized_date:
-                            plans.append(plan_data)
-                except Exception as e:
-                    app.logger.error(f"Error reading file {filename}: {str(e)}")
-                    continue
-        
-        if not plans:
-            return jsonify({'success': True, 'ships': []}), 200
-            
-        latest_plan = max(plans, key=lambda x: x.get('created_at', ''))
-        return jsonify({'success': True, 'ships': latest_plan.get('ships', [])}), 200
-        
-    except Exception as e:
-        app.logger.error(f"Error getting ship plans: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/save-qc-usage', methods=['POST'])
-def save_qc_usage():
-    try:
-        data = request.get_json()
-        date = data.get('date')
-        usage = data.get('usage')
-        
-        if not date or usage is None:
-            return jsonify({'success': False, 'message': 'Date and usage are required'}), 400
-            
-        if not is_valid_date(date):
-            return jsonify({'success': False, 'message': 'Invalid date format or value'}), 400
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            return jsonify({'success': False, 'message': 'Failed to normalize date'}), 400
-            
-        qc_usage_data[normalized_date] = usage
-        
-        # 파일에 저장
-        save_qc_usage_data()
-        
-        return jsonify({'success': True, 'message': 'QC usage saved successfully'})
-    except Exception as e:
-        app.logger.error(f"Error saving QC usage: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-@app.route('/api/get-qc-usage/<date>')
-def get_qc_usage_by_date(date):
-    try:
-        if not is_valid_date(date):
-            return jsonify({'success': False, 'message': 'Invalid date format or value'}), 400
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            return jsonify({'success': False, 'message': 'Failed to normalize date'}), 400
-            
-        usage = qc_usage_data.get(normalized_date, 0)
-        return jsonify({'success': True, 'usage': usage})
-    except Exception as e:
-        app.logger.error(f"Error getting QC usage: {str(e)}")
-        return jsonify({'success': False, 'message': str(e)}), 500
-
-# Notes 저장을 위한 전역 변수
-operation_notes = {}
-
-@app.route('/save_operation_notes', methods=['POST'])
-@requires_permission('edit')
-def save_operation_notes():
-    global operation_notes
-    data = request.get_json()
-    date = data.get('date', '')
-    notes = data.get('notes', '')
-    operation_notes[date] = notes
-    return jsonify({'success': True})
-
-@app.route('/get_operation_notes', methods=['GET'])
-def get_operation_notes():
-    date = request.args.get('date', '')
-    notes = operation_notes.get(date, '')
-    return jsonify({'notes': notes})
-
-# QC 사용률을 저장할 전역 변수와 파일 경로
-qc_usage_data = {}
-QC_USAGE_FILE = os.path.join(DATA_DIR, 'qc_usage.json')
-FINAL_MAINTENANCE_FILE = os.path.join(DATA_DIR, 'final_maintenance.json')
-
-# QC 사용률 데이터 로드
-def load_qc_usage_data():
-    global qc_usage_data
-    try:
-        if os.path.exists(QC_USAGE_FILE):
-            with open(QC_USAGE_FILE, 'r') as f:
-                qc_usage_data = json.load(f)
-    except Exception as e:
-        app.logger.error(f"Error loading QC usage data: {str(e)}")
-
-# QC 사용률 데이터 저장
-def save_qc_usage_data():
-    try:
-        with open(QC_USAGE_FILE, 'w') as f:
-            json.dump(qc_usage_data, f, indent=2)
-    except Exception as e:
-        app.logger.error(f"Error saving QC usage data: {str(e)}")
-
-# Final PMS/RMS 저장 API
-@app.route('/api/save-final-maintenance', methods=['POST'])
-def save_final_maintenance():
-    try:
-        if not is_logged_in():
-            return jsonify({'error': 'Login required'}), 401
-
-        data = request.get_json()
-        date = data.get('date')
-        count = data.get('count')
-        
-        if not date or count is None:
-            return jsonify({'error': 'Missing required fields'}), 400
-            
-        # 날짜 형식 검증
-        try:
-            datetime.strptime(date, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({'error': 'Invalid date format'}), 400
-            
-        final_maintenance_data = {}
-        if os.path.exists(FINAL_MAINTENANCE_FILE):
-            with open(FINAL_MAINTENANCE_FILE, 'r') as f:
-                final_maintenance_data = json.load(f)
-                
-        final_maintenance_data[date] = count
-        
-        with open(FINAL_MAINTENANCE_FILE, 'w') as f:
-            json.dump(final_maintenance_data, f)
-            
-        return jsonify({'message': 'Final maintenance count saved successfully'})
-    except Exception as e:
-        app.logger.error(f"Error in save_final_maintenance: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-# Final PMS/RMS 조회 API
-@app.route('/api/get-final-maintenance', methods=['GET'])
-def get_final_maintenance():
-    try:
-        date = request.args.get('date')
-        if not date:
-            return jsonify({'error': 'Date is required'}), 400
-            
-        # 날짜 형식 검증
-        try:
-            datetime.strptime(date, '%Y-%m-%d')
-        except ValueError:
-            return jsonify({'error': 'Invalid date format'}), 400
-            
-        if os.path.exists(FINAL_MAINTENANCE_FILE):
-            with open(FINAL_MAINTENANCE_FILE, 'r') as f:
-                final_maintenance_data = json.load(f)
-                count = final_maintenance_data.get(date, 0)
-                return jsonify({'count': count})
-        
-        return jsonify({'count': 0})
-    except Exception as e:
-        app.logger.error(f"Error in get_final_maintenance: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-# 서버 시작 시 QC 사용률 데이터 로드
-load_qc_usage_data()
-
+# choose_crane 페이지에서 통합 plan 페이지로 리다이렉트
 @app.route('/choose_crane/<date>')
 def choose_crane(date):
-    try:
-        if not is_valid_date(date):
-            return redirect(url_for('calendar'))
-            
-        normalized_date = normalize_date(date)
-        if not normalized_date:
-            return redirect(url_for('calendar'))
-            
-        return render_template('choose_crane.html',
-                             selected_date=normalized_date,
-                             is_logged_in=is_logged_in(),
-                             can_edit='edit' in get_user_permissions())
-    except Exception as e:
-        app.logger.error(f"Error in choose_crane route: {str(e)}")
-        return redirect(url_for('calendar'))
+    return redirect(url_for('integrated_plan', date=date))
 
+# 통합 계획 페이지
+@app.route('/plan/<date>')
+def integrated_plan(date):
+    if not is_valid_date(date):
+        return redirect(url_for('calendar'))
+    
+    return render_template('integrated_plan.html',
+                         selected_date=date,
+                         is_logged_in=is_logged_in(),
+                         can_edit='edit' in get_user_permissions(),
+                         session=session)
+
+# API 엔드포인트들
+@app.route('/api/save_maintenance_plan', methods=['POST'])
+def save_maintenance_plan():
+    if not is_logged_in() or 'edit' not in get_user_permissions():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        data = request.get_json()
+        plans = data.get('plans', [])
+        crane_type = data.get('crane_type', 'qc')  # 'qc' 또는 'armgc'
+        
+        # 날짜 정보 가져오기
+        date_str = request.args.get('date', get_today())
+        
+        # 파일명 설정
+        filename = f"{date_str}_{crane_type}_maintenance.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        # 데이터 저장
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(plans, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': 'Success', 'plans': plans})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get_maintenance_plans', methods=['GET'])
+def get_maintenance_plans():
+    try:
+        date_str = request.args.get('date', get_today())
+        crane_type = request.args.get('crane_type', 'qc')  # 'qc' 또는 'armgc'
+        
+        filename = f"{date_str}_{crane_type}_maintenance.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify([])
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            plans = json.load(f)
+        
+        return jsonify(plans)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/delete_maintenance_plan/<plan_id>', methods=['DELETE'])
+def delete_maintenance_plan(plan_id):
+    if not is_logged_in() or 'edit' not in get_user_permissions():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    try:
+        date_str = request.args.get('date', get_today())
+        crane_type = request.args.get('crane_type', 'qc')
+        
+        filename = f"{date_str}_{crane_type}_maintenance.json"
+        filepath = os.path.join(DATA_DIR, filename)
+        
+        if not os.path.exists(filepath):
+            return jsonify({'error': 'Plan not found'}), 404
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            plans = json.load(f)
+        
+        # plan_id로 계획 찾아서 제거
+        plans = [p for p in plans if p.get('id') != plan_id]
+        
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(plans, f, ensure_ascii=False, indent=2)
+        
+        return jsonify({'message': 'Success'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 서버 시작 시 데이터 디렉토리 확인 및 생성
 if __name__ == '__main__':
-    # 서버 시작 시 데이터 디렉토리 확인 및 생성
     os.makedirs(DATA_DIR, exist_ok=True)
     # 서버 시작 시 오래된 데이터 정리
     cleanup_old_data()

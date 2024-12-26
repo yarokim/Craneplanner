@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function () {
         duplicateCrane: '이미 선택된 크레인입니다.'
     };
 
-    // 날짜 포맷 유틸리티
+    // 날짜 포맷 유틸리
     const dateUtils = {
         formatDateForAPI: function(date) {
             if (typeof date === 'string') {
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!select) return true;  // select가 null이면 검증 통과
 
         const row = select.closest('.maintenance-row');
-        if (!row) return true;  // row를 찾을 수 없으면 검증 통과
+        if (!row) return true;  // row를 찾을 수 없으면 검증 통���
 
         const value = select.value;
         if (!value) return true;  // 값이 없으면 검증 통과
@@ -147,12 +147,58 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // 새 행 추가
-    function addNewRow() {
-        const row = createMaintenanceRow();
+    function addNewRow(plan = null) {
+        const row = document.createElement('tr');
         
-        // 이벤트 리스너 추가
-        setupRowEventListeners(row);
+        // QC 크레인 번호 옵션
+        const craneOptions = Array.from(document.querySelector('.crane-input').options)
+            .map(option => `<option value="${option.value}" ${plan && plan.crane === option.value ? 'selected' : ''}>${option.value}</option>`)
+            .join('');
+        
+        row.innerHTML = `
+            <td>
+                <select class="crane-input form-control">
+                    <option value="">선택</option>
+                    ${craneOptions}
+                </select>
+            </td>
+            <td>
+                <textarea class="task-input form-control" 
+                          style="resize: vertical; min-height: 38px;" 
+                          placeholder="작업 내용">${plan ? plan.task : ''}</textarea>
+            </td>
+            <td>
+                <select class="start-time-input form-control">
+                    ${generateTimeOptions(plan ? plan.start_time : '')}
+                </select>
+            </td>
+            <td>
+                <select class="end-time-input form-control">
+                    ${generateTimeOptions(plan ? plan.end_time : '')}
+                </select>
+            </td>
+            <td>
+                <textarea class="notes-input form-control" style="resize: vertical; min-height: 38px;" placeholder="비고">${plan ? plan.notes : ''}</textarea>
+            </td>
+            <td>
+                <button class="btn btn-danger btn-sm delete-row">삭제</button>
+            </td>
+        `;
         maintenanceBody.appendChild(row);
+        
+        row.querySelector('.delete-row').addEventListener('click', function() {
+            row.remove();
+        });
+    }
+
+    // 시간 옵션 생성 함수
+    function generateTimeOptions(selectedTime) {
+        let options = ['<option value="">선택</option>'];
+        for (let hour = 0; hour < 24; hour++) {
+            const timeValue = `${hour.toString().padStart(2, '0')}:00`;
+            options.push(`<option value="${timeValue}" ${selectedTime === timeValue ? 'selected' : ''}>${timeValue}</option>`);
+        }
+        return options.join('');
     }
 
     // 행 이벤트 리스너 설정
@@ -631,4 +677,54 @@ document.addEventListener('DOMContentLoaded', function () {
     loadPlan();
     loadOperationNotes();
     loadFinalMaintenanceCount();
+
+    // 페이지 로드 시 기존 행들에 대�� 시간 입력 이벤트 리스너 추가
+    document.addEventListener('DOMContentLoaded', function() {
+        const timeInputs = document.querySelectorAll('input[type="time"]');
+        timeInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                const time = this.value;
+                if (time) {
+                    const [hours, minutes] = time.split(':');
+                    this.value = `${hours}:00`;
+                }
+            });
+        });
+    });
+
+    // 페이지 로드 시 기존 행들의 시간 입력을 select로 변환하고 task를 textarea로 변환
+    document.addEventListener('DOMContentLoaded', function() {
+        const rows = document.querySelectorAll('#maintenance-body tr');
+        rows.forEach(row => {
+            // 시간 입력 select 변환
+            const startTimeInput = row.querySelector('.start-time-input');
+            const endTimeInput = row.querySelector('.end-time-input');
+            
+            if (startTimeInput && startTimeInput.tagName === 'INPUT') {
+                const startTimeSelect = document.createElement('select');
+                startTimeSelect.className = 'start-time-input form-control';
+                startTimeSelect.innerHTML = generateTimeOptions(startTimeInput.value);
+                startTimeInput.parentNode.replaceChild(startTimeSelect, startTimeInput);
+            }
+            
+            if (endTimeInput && endTimeInput.tagName === 'INPUT') {
+                const endTimeSelect = document.createElement('select');
+                endTimeSelect.className = 'end-time-input form-control';
+                endTimeSelect.innerHTML = generateTimeOptions(endTimeInput.value);
+                endTimeInput.parentNode.replaceChild(endTimeSelect, endTimeInput);
+            }
+
+            // task 입력 textarea 변환
+            const taskInput = row.querySelector('.task-input');
+            if (taskInput && taskInput.tagName === 'INPUT') {
+                const taskTextarea = document.createElement('textarea');
+                taskTextarea.className = 'task-input form-control';
+                taskTextarea.style.resize = 'vertical';
+                taskTextarea.style.minHeight = '38px';
+                taskTextarea.placeholder = '작업 내용';
+                taskTextarea.value = taskInput.value;
+                taskInput.parentNode.replaceChild(taskTextarea, taskInput);
+            }
+        });
+    });
 });

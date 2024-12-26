@@ -1,0 +1,53 @@
+<table class="table">
+    <thead>
+        <tr>
+            <th>크레인</th>
+            <th>작업</th>
+            <th>시작 시간</th>
+            <th>종료 시간</th>
+            <th>비고</th>
+            <th>작업</th>
+        </tr>
+    </thead>
+    <tbody id="maintenance-body">
+        {% for plan in plans %}
+        <tr>
+            <td>
+                <select class="crane-input form-control">
+                    <option value="">선택</option>
+                    {% for crane in cranes %}
+                    <option value="{{ crane }}" {% if plan and plan.crane == crane %}selected{% endif %}>{{ crane }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <textarea class="task-input form-control" 
+                          style="resize: vertical; min-height: 38px;" 
+                          placeholder="작업 내용">{{ plan.task }}</textarea>
+            </td>
+            <td>
+                <select class="start-time-input form-control">
+                    {% for hour in range(24) %}
+                    {% set time = '%02d:00'|format(hour) %}
+                    <option value="{{ time }}" {% if plan and plan.start_time == time %}selected{% endif %}>{{ time }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <select class="end-time-input form-control">
+                    {% for hour in range(24) %}
+                    {% set time = '%02d:00'|format(hour) %}
+                    <option value="{{ time }}" {% if plan and plan.end_time == time %}selected{% endif %}>{{ time }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td>
+                <textarea class="notes-input form-control" style="resize: vertical; min-height: 38px;" placeholder="비고">{{ plan.notes }}</textarea>
+            </td>
+            <td>
+                <button class="btn btn-danger btn-sm delete-row">삭제</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table> 
