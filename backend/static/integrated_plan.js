@@ -30,10 +30,16 @@ function addMaintenanceRow(equipmentType, data = {}) {
     // 공통 필드
     const timeFields = `
         <td>
-            <input type="time" class="form-control form-control-sm" name="start-time" value="${data.startTime || ''}" required>
+            <select class="form-control form-control-sm" name="start-time" required>
+                <option value="">Select Start Time</option>
+                ${createTimeOptions(data.startTime)}
+            </select>
         </td>
         <td>
-            <input type="time" class="form-control form-control-sm" name="end-time" value="${data.endTime || ''}" required>
+            <select class="form-control form-control-sm" name="end-time" required>
+                <option value="">Select End Time</option>
+                ${createTimeOptions(data.endTime)}
+            </select>
         </td>
     `;
     
@@ -104,6 +110,39 @@ function addMaintenanceRow(equipmentType, data = {}) {
 
     row.innerHTML = specificFields + timeFields + actionButtons;
     tbody.appendChild(row);
+    
+    // Add time validation listeners
+    const startTimeSelect = row.querySelector('select[name="start-time"]');
+    const endTimeSelect = row.querySelector('select[name="end-time"]');
+    
+    startTimeSelect.addEventListener('change', () => validateTimeSelection(row));
+    endTimeSelect.addEventListener('change', () => validateTimeSelection(row));
+}
+
+// Create time options (00:00 to 23:00)
+function createTimeOptions(selectedTime = '') {
+    let options = [];
+    for (let i = 0; i < 24; i++) {
+        const hour = i.toString().padStart(2, '0');
+        const timeValue = `${hour}:00`;
+        options.push(`<option value="${timeValue}" ${selectedTime === timeValue ? 'selected' : ''}>${timeValue}</option>`);
+    }
+    return options.join('');
+}
+
+// Time validation function
+function validateTimeSelection(row) {
+    const startTime = row.querySelector('select[name="start-time"]').value;
+    const endTime = row.querySelector('select[name="end-time"]').value;
+    
+    if (startTime && endTime) {
+        if (endTime <= startTime) {
+            showToast('End time must be after start time', 'error');
+            row.querySelector('select[name="end-time"]').value = '';
+            return false;
+        }
+    }
+    return true;
 }
 
 // Crane numbers configuration
@@ -173,8 +212,8 @@ async function saveMaintenancePlan(equipmentType) {
     for (let i = 0; i < rows.length; i++) {
         const row = rows[i];
         const data = {
-            startTime: row.querySelector('input[name="start-time"]').value,
-            endTime: row.querySelector('input[name="end-time"]').value,
+            startTime: row.querySelector('select[name="start-time"]').value,
+            endTime: row.querySelector('select[name="end-time"]').value,
         };
 
         if (equipmentType === 'mobile') {
@@ -185,41 +224,40 @@ async function saveMaintenancePlan(equipmentType) {
             data.facilityName = row.querySelector('input[name="facility-name"]').value;
             data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
         } else {
-            // QC와 ARMGC의 경우
             data.craneNumber = row.querySelector('select[name="crane-number"]').value;
             data.maintenanceType = row.querySelector('select[name="maintenance-type"]').value;
         }
-
+        
+        // Validate required fields
+        if (!data.startTime || !data.endTime) {
+            showToast('Please fill in all required fields', 'error');
+            return;
+        }
+        
         maintenanceData.push(data);
     }
 
-    const selectedDate = document.getElementById('datepicker').value;
-    const requestData = {
-        date: selectedDate,
-        equipmentType: equipmentType,
-        maintenanceData: maintenanceData
-    };
+    try {
+        const response = await fetch('/api/save-maintenance-plan', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                equipmentType: equipmentType,
+                maintenanceData: maintenanceData
+            })
+        });
 
-    fetch('/api/save-maintenance-plan', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+        if (response.ok) {
             showToast('Maintenance plan saved successfully', 'success');
-            loadMaintenancePlan(equipmentType);
         } else {
             showToast('Failed to save maintenance plan', 'error');
         }
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error:', error);
-        showToast('Failed to save maintenance plan', 'error');
-    });
+        showToast('Error saving maintenance plan', 'error');
+    }
 }
 
 async function loadMaintenancePlan(equipmentType) {
@@ -300,7 +338,7 @@ async function saveMaintenancePlan(isARMGC = false) {
         const response = await fetch('/api/save_maintenance_plan', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 plans: plans,
@@ -403,7 +441,7 @@ async function saveFinalMaintenance() {
         const response = await fetch(`/api/save_final_maintenance?date=${date}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 count: parseInt(finalCount),
@@ -419,7 +457,7 @@ async function saveFinalMaintenance() {
         showToast('Final maintenance count saved successfully', 'success');
     } catch (error) {
         console.error('Error saving final maintenance:', error);
-        showToast(error.message, 'error');
+        showToast('Failed to save final maintenance', 'error');
     }
 }
 
@@ -461,7 +499,7 @@ async function saveOperationNotes() {
         const response = await fetch(`/api/save_operation_notes?date=${date}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
             },
             body: JSON.stringify({
                 notes: notes

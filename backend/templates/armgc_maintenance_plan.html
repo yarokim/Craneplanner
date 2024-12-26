@@ -245,13 +245,120 @@
     <script src="{{ url_for('static', filename='dateUtils.js') }}"></script>
     <script src="{{ url_for('static', filename='maintenance.js') }}"></script>
     <script>
-        // 권한 정보를 JavaScript에서 사용할 수 있도록 전달
-        window.userPermissions = {
-            isLoggedIn: {{ 'true' if is_logged_in else 'false' }},
-            canEdit: {{ 'true' if can_edit else 'false' }},
-            canDelete: {{ 'true' if can_delete else 'false' }},
-            canManage: {{ 'true' if can_manage else 'false' }}
-        };
+        // 시간 옵션 생성 함수
+        function createTimeOptions(selectedTime = '') {
+            let options = [];
+            for (let i = 0; i < 24; i++) {
+                const hour = i.toString().padStart(2, '0');
+                const timeValue = `${hour}:00`;
+                options.push(`<option value="${timeValue}" ${selectedTime === timeValue ? 'selected' : ''}>${timeValue}</option>`);
+            }
+            return options.join('');
+        }
+
+        function addMaintenanceRow() {
+            const tbody = document.getElementById('maintenance-table-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <select class="form-control form-control-sm" name="crane-number" required>
+                        <option value="">Select Crane</option>
+                        ${createCraneOptions()}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm" name="maintenance-type">
+                        <option value="PMS">PMS</option>
+                        <option value="RMS">RMS</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm" name="start-time" required>
+                        <option value="">Select Start Time</option>
+                        ${createTimeOptions()}
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control form-control-sm" name="end-time" required>
+                        <option value="">Select End Time</option>
+                        ${createTimeOptions()}
+                    </select>
+                </td>
+                <td>
+                    <button class="btn btn-outline-danger btn-sm" onclick="this.closest('tr').remove()">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+            
+            // 시간 유효성 검사 리스너 추가
+            const startTimeSelect = row.querySelector('select[name="start-time"]');
+            const endTimeSelect = row.querySelector('select[name="end-time"]');
+            
+            startTimeSelect.addEventListener('change', () => validateTimeSelection(row));
+            endTimeSelect.addEventListener('change', () => validateTimeSelection(row));
+        }
+
+        // 시간 유효성 검사
+        function validateTimeSelection(row) {
+            const startTime = row.querySelector('select[name="start-time"]').value;
+            const endTime = row.querySelector('select[name="end-time"]').value;
+            
+            if (startTime && endTime) {
+                if (endTime <= startTime) {
+                    showToast('End time must be after start time', 'error');
+                    row.querySelector('select[name="end-time"]').value = '';
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function showToast(message, type = 'info') {
+            toastr[type](message);
+        }
+
+        async function saveMaintenancePlan() {
+            const maintenanceData = [];
+            const rows = document.getElementById('maintenance-table-body').getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const data = {
+                    craneNumber: row.querySelector('select[name="crane-number"]').value,
+                    maintenanceType: row.querySelector('select[name="maintenance-type"]').value,
+                    startTime: row.querySelector('select[name="start-time"]').value,
+                    endTime: row.querySelector('select[name="end-time"]').value
+                };
+                
+                if (!data.craneNumber || !data.startTime || !data.endTime) {
+                    showToast('Please fill in all required fields', 'error');
+                    return;
+                }
+                
+                maintenanceData.push(data);
+            }
+
+            try {
+                const response = await fetch('/api/save-maintenance-plan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(maintenanceData)
+                });
+
+                if (response.ok) {
+                    showToast('Maintenance plan saved successfully', 'success');
+                } else {
+                    showToast('Failed to save maintenance plan', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error saving maintenance plan', 'error');
+            }
+        }
     </script>
     <style>
         .maintenance-section {
